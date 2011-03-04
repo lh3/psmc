@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
 	seq = kseq_init(fp);
 	while ((l = kseq_read(seq)) >= 0) {
-		int32_t i, j, x, z[4];
+		int32_t i, z[4];
 		uint8_t *s;
 		s = calloc(l, 1);
 		for (i = 0; i < l; ++i) { // create a copy
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 		for (i = 0; i < l; ++i) {
 			int c0 = bitcnt_table[(int)seq->seq.s[i]];
 			int c1 = bitcnt_table[s[i]];
-			if (i && i%skip == 0) {
+			if (i && i%step == 0) {
 				z[0] -= z[2]; z[1] -= z[3];
 				fwrite(z, 4, 4, stdout);
 				z[0] = z[1] = z[2] = z[3] = 0;
