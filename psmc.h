@@ -28,7 +28,7 @@ typedef struct
 	int64_t sum_L;
 	int sum_n;
 
-	FILE *fpout;
+	FILE *fpout, *fpcnt;
 
 	FLOAT *inp_ti; // time intervals from the input
 	FLOAT *inp_pa; // parameters from the input

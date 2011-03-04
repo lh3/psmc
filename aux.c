@@ -107,7 +107,10 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 {
 	hmm_par_t *hp = pd->hp;
 	int i, k, prev, start;
-	FLOAT p, q, *t, *t2, *t_min, *invCov = 0, *marginal_stddev = 0;
+	FLOAT p, q, *t, *t2, *t_min;
+	double *cnt = 0;
+	int32_t n_cnt;
+	// compute the time intervals and the coalescent average
 	t = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 1));
 	for (k = 0; k <= pp->n; ++k) {
 		t[k] = (pd->t[k] + 1.0 - (pd->t[k+1] - pd->t[k]) / (exp(pd->t[k+1]) / exp(pd->t[k]) - 1.0)) / pd->C_pi;
@@ -123,6 +126,11 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 		for (; i < pp->n; ++i) if (pp->par_map[i] > k) break;
 		t2[k] = (pd->t[prev] + 1.0 - (pd->t[i] - pd->t[prev]) / (exp(pd->t[i]) / exp(pd->t[prev]) - 1.0)) / pd->C_pi;
 	}
+	if (pp->fpcnt) {
+		fread(&n_cnt, 4, 1, pp->fpcnt); // read the number of counts per base
+		cnt = (double*)calloc((pp->n + 1) * n_cnt, sizeof(double));
+	}
+	// the core part
 	hmm_pre_backward(hp);
 	for (i = 0; i != pp->n_seqs; ++i) {
 		hmm_data_t *hd;
@@ -159,7 +167,7 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
 			for (k = 1; k <= s->L; ++k) {
 				int l;
-				FLOAT p, *fu, *bu1, *eu1;
+				FLOAT p, *fu, *bu1, *eu1; // p is the recombination probability?
 				if (k < s->L) {
 					p = 0.0; fu = hd->f[k]; bu1 = hd->b[k+1]; eu1 = hp->e[(int)hd->seq[k+1]];
 					for (l = 0; l < hp->n; ++l)
@@ -172,12 +180,30 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 					fprintf(pp->fpout, "\t%.4f", prob[l]);
 				fprintf(pp->fpout, "\n");
 			}
+			free(prob);
+		}
+		if (pp->fpcnt) { // very similar to full decoding above
+			int32_t *cnt1, l;
+			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
+			fread(&l, 4, 1, pp->fpcnt);
+			assert(l >= s->L); // FIXME: if there are very short sequence in the input, fpcnt may be different from the input!!!
+			cnt1 = malloc(l * n_cnt * 4);
+			fread(cnt1, n_cnt * l, 4, pp->fpcnt);
+			for (k = 1; k <= s->L; ++k) {
+				int j, l;
+				hmm_post_state(hp, hd, k, prob);
+				for (l = 0; l < hp->n; ++l)
+					for (j = 0; j < n_cnt; ++j) 
+						cnt[l*n_cnt + j] += prob[l] * cnt1[(k-1)*n_cnt + j];
+			}
+			free(prob);
+			free(cnt1); free(prob);
 		}
 		/* free */
 		hmm_delete_data(hd);
 		free(seq);
 	}
-	free(t); free(t2); free(t_min); free(invCov); free(marginal_stddev);
+	free(t); free(t2); free(t_min); free(cnt);
 }
 
 void psmc_simulate(const psmc_par_t *pp, const psmc_data_t *pd)

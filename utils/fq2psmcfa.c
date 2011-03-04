@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
         }
 		ss[l++] = (float)nN/BLOCK_LEN > N_RATIO? 'N' : (is_hetb? 'K' : 'T');
 		fprintf(stderr, "[fq2psmcfa] %s: %d, %d\n", seq->name.s, n_good_bases, len);
-		if ((double)n_good_bases / len >= 0.33 && n_good_bases >= n_min_good) {
+		if ((double)n_good_bases / len >= 0.2 && n_good_bases >= n_min_good) {
 			printf(">%s", seq->name.s);
 			for (i = 0; i < l ; ++i) {
 				if (i%60 == 0) putchar('\n');
