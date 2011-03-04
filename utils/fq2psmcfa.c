@@ -1,6 +1,7 @@
 #include <zlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "kseq.h"
 KSEQ_INIT(gzFile, gzread)
 
