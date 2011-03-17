@@ -98,8 +98,8 @@ int main(int argc, char *argv[])
 			if (c1 < 3) ++z[2];
 			if (c1 == 2) ++z[3];
 		}
-		if (bin) z[1] = (z[1] >= 1), z[3] = (z[3] >= 1);
 		z[0] -= z[2]; z[1] -= z[3];
+		if (bin) z[1] = (z[1] >= 1), z[3] = (z[3] >= 1);
 		fwrite(z, 4, 4, stdout);
 		free(s);
 	}
