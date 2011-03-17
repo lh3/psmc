@@ -60,13 +60,13 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (argc == optind) {
-		fprintf(stderr, "Usage: cnt_bed_mut [-s 100] <in.fa> [<in.bed>]\n");
+		fprintf(stderr, "Usage: cntcpg [-s 100] <in.fa>\n");
 		return 1;
 	}
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
 	seq = kseq_init(fp);
-	i = 4; // number of counts
-	fwrite(&i, 4, 1, stdout);
+	l = 4; // number of counts
+	fwrite(&l, 4, 1, stdout);
 	while ((l = kseq_read(seq)) >= 0) {
 		int32_t i, z[4];
 		uint8_t *s;

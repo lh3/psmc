@@ -196,12 +196,19 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 					for (j = 0; j < n_cnt; ++j) 
 						cnt[l*n_cnt + j] += prob[l] * cnt1[(k-1)*n_cnt + j];
 			}
-			free(prob);
 			free(cnt1); free(prob);
 		}
 		/* free */
 		hmm_delete_data(hd);
 		free(seq);
+	}
+	if (pp->fpcnt) {
+		for (i = 0; i < hp->n; ++i) {
+			fprintf(pp->fpout, "CT\t%d", i);
+			for (k = 0; k < n_cnt; ++k)
+				fprintf(pp->fpout, "\t%f", cnt[i*n_cnt + k]);
+			fprintf(pp->fpout, "\n");
+		}
 	}
 	free(t); free(t2); free(t_min); free(cnt);
 }

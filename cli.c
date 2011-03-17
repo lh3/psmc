@@ -159,6 +159,7 @@ void psmc_delete_par(psmc_par_t *par)
 		free(par->seqs[i].name);
 		free(par->seqs[i].seq);
 	}
+	if (par->fpcnt) fclose(par->fpcnt);
 	free(par->seqs);
 	free(par);
 }

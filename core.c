@@ -45,6 +45,7 @@ void psmc_delete_data(psmc_data_t *pd)
 	free(pd->sigma); free(pd->post_sigma);
 	free(pd->t); free(pd->params);
 	hmm_delete_par(pd->hp);
+	free(pd);
 }
 void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{kl} and e_k(b)
 {
