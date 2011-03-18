@@ -7,7 +7,7 @@ KSEQ_INIT(gzFile, gzread)
 
 static double N_RATIO = 0.9;
 static int BLOCK_LEN = 100;
-static int par1_b = 1, par1_e = 2709520;
+static int par1_b = 1, par1_e = 2709520; // this is the b36 coordinate
 static int par2_b = 154584237, par2_e = 154913754;
 
 unsigned char aln_nt16_table[256] = {
@@ -35,16 +35,17 @@ int main(int argc, char *argv[])
 {
 	gzFile fp;
 	kseq_t *seq;
-	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0;
-	while ((c = getopt(argc, argv, "q:xg:")) >= 0) {
+	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0, tv_only = 0;
+	while ((c = getopt(argc, argv, "q:xg:v")) >= 0) {
 		switch (c) {
 		case 'q': min_qual = atoi(optarg); break;
 		case 'x': mask_pseudo = 1; break;
+		case 'v': tv_only = 1; break;
 		case 'g': n_min_good = atoi(optarg); break;
 		}
 	}
 	if (argc == optind) {
-		fprintf(stderr, "Usage: fq2psmcfa [-x] [-q %d] [-g %d] <in.fq>\n", min_qual, n_min_good);
+		fprintf(stderr, "Usage: fq2psmcfa [-vx] [-q %d] [-g %d] <in.fq>\n", min_qual, n_min_good);
 		return 1;
 	}
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
@@ -60,7 +61,13 @@ int main(int argc, char *argv[])
 		if (seq->qual.l) {
 			for (i = 0; i < seq->seq.l; ++i)
 				if (seq->qual.s[i] - 33 < min_qual) seq->seq.s[i] = tolower(seq->seq.s[i]);
-		} else fprintf(stderr, "[fq2psmcfa] the input is not FASTQ. Quality filter disabled.\n");
+		}
+		if (tv_only) {
+			for (i = 0; i < seq->seq.l; ++i) {
+				int c = aln_nt16_table[(int)seq->seq.s[i]];
+				if (c == 5 || c == 10) seq->seq.s[i] = tolower(seq->seq.s[i]);
+			}
+		}
 		//
 		ss = (char*)calloc((len + BLOCK_LEN - 1) / BLOCK_LEN + 2, 1);
         for (i = 0; i != len; ++i) {
@@ -76,7 +83,7 @@ int main(int argc, char *argv[])
 			if (!is_N) ++n_good_bases;
         }
 		ss[l++] = (float)nN/BLOCK_LEN > N_RATIO? 'N' : (is_hetb? 'K' : 'T');
-		fprintf(stderr, "[fq2psmcfa] %s: %d, %d\n", seq->name.s, n_good_bases, len);
+		//fprintf(stderr, "[fq2psmcfa] %s: %d, %d\n", seq->name.s, n_good_bases, len);
 		if ((double)n_good_bases / len >= 0.2 && n_good_bases >= n_min_good) {
 			printf(">%s", seq->name.s);
 			for (i = 0; i < l ; ++i) {

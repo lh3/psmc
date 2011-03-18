@@ -54,14 +54,16 @@ int main(int argc, char *argv[])
 	gzFile fp;
 	kseq_t *seq;
 	int32_t l, c, step = 100, bin = 0;
-	while ((c = getopt(argc, argv, "s:b")) >= 0) {
+	double n_ratio = 0.9;
+	while ((c = getopt(argc, argv, "s:n:b")) >= 0) {
 		switch (c) {
 		case 'b': bin = 1; break;
 		case 's': step = atoi(optarg); break;
+		case 'n': n_ratio = atof(optarg); break;
 		}
 	}
 	if (argc == optind) {
-		fprintf(stderr, "Usage: cntcpg [-b] [-s 100] <in.fa>\n");
+		fprintf(stderr, "Usage: cntcpg [-b] [-s 100] [-n 0.9] <in.fa>\n");
 		return 1;
 	}
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
@@ -88,6 +90,7 @@ int main(int argc, char *argv[])
 			int c0 = bitcnt_table[(int)seq->seq.s[i]];
 			int c1 = bitcnt_table[s[i]];
 			if (i && i%step == 0) {
+				if (step - z[0] > step * n_ratio) z[0] = z[1] = z[2] = z[3] = 0;
 				z[0] -= z[2]; z[1] -= z[3];
 				if (bin) z[1] = (z[1] >= 1), z[3] = (z[3] >= 1);
 				fwrite(z, 4, 4, stdout);
@@ -98,6 +101,7 @@ int main(int argc, char *argv[])
 			if (c1 < 3) ++z[2];
 			if (c1 == 2) ++z[3];
 		}
+		if (step - z[0] > step * n_ratio) z[0] = z[1] = z[2] = z[3] = 0;
 		z[0] -= z[2]; z[1] -= z[3];
 		if (bin) z[1] = (z[1] >= 1), z[3] = (z[3] >= 1);
 		fwrite(z, 4, 4, stdout);
