@@ -10,15 +10,15 @@ static int BLOCK_LEN = 100;
 static int par1_b = 1, par1_e = 2709520; // this is the b36 coordinate
 static int par2_b = 154584237, par2_e = 154913754;
 
-unsigned char aln_nt16_table[256] = {
+unsigned char seq_nt16_table[256] = {
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,16 /*'-'*/,15,15,
+	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15 /*'-'*/,15,15,
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
-	15, 1,14, 4, 11,15,15, 2, 13,15,15,10, 15, 5,15,15,
-	15,15, 3, 6,  8,15, 7, 9,  0,12,15,15, 15,15,15,15,
-	15, 1,14, 4, 11,15,15, 2, 13,15,15,10, 15, 5,15,15,
-	15,15, 3, 6,  8,15, 7, 9,  0,12,15,15, 15,15,15,15,
+	15, 1,14, 2, 13,15,15, 4, 11,15,15,12, 15, 3,15,15,
+	15,15, 5, 6,  8,15, 7, 9,  0,10,15,15, 15,15,15,15,
+	15, 1,14, 2, 13,15,15, 4, 11,15,15,12, 15, 3,15,15,
+	15,15, 5, 6,  8,15, 7, 9,  0,10,15,15, 15,15,15,15,
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15,
@@ -29,7 +29,7 @@ unsigned char aln_nt16_table[256] = {
 	15,15,15,15, 15,15,15,15, 15,15,15,15, 15,15,15,15
 };
 
-static int count_table[] = { 4, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
+int bitcnt_table[] = { 4, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
 int main(int argc, char *argv[])
 {
@@ -64,21 +64,21 @@ int main(int argc, char *argv[])
 		}
 		if (tv_only) {
 			for (i = 0; i < seq->seq.l; ++i) {
-				int c = aln_nt16_table[(int)seq->seq.s[i]];
+				int c = seq_nt16_table[(int)seq->seq.s[i]];
 				if (c == 5 || c == 10) seq->seq.s[i] = tolower(seq->seq.s[i]);
 			}
 		}
 		//
 		ss = (char*)calloc((len + BLOCK_LEN - 1) / BLOCK_LEN + 2, 1);
         for (i = 0; i != len; ++i) {
-			int is_N, is_het = 0, c = islower(seq->seq.s[i])? 15 : aln_nt16_table[(int)seq->seq.s[i]];
+			int is_N, is_het = 0, c = islower(seq->seq.s[i])? 15 : seq_nt16_table[(int)seq->seq.s[i]];
 			if (i && i%BLOCK_LEN == 0) {
 				ss[l++] = (float)nN/BLOCK_LEN > N_RATIO? 'N' : (is_hetb? 'K' : 'T');
 				is_hetb = 0; nN = 0;
 			}
 			is_N = (c == 15)? 1 : 0;
 			if (is_N) ++nN;
-			else if (count_table[c] == 2) is_het = 1;
+			else if (bitcnt_table[c] == 2) is_het = 1;
 			if (is_het) is_hetb = 1;
 			if (!is_N) ++n_good_bases;
         }
