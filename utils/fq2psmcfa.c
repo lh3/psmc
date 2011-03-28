@@ -36,16 +36,17 @@ int main(int argc, char *argv[])
 	gzFile fp;
 	kseq_t *seq;
 	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0, tv_only = 0;
-	while ((c = getopt(argc, argv, "q:xg:v")) >= 0) {
+	while ((c = getopt(argc, argv, "q:xg:s:v")) >= 0) {
 		switch (c) {
 		case 'q': min_qual = atoi(optarg); break;
 		case 'x': mask_pseudo = 1; break;
 		case 'v': tv_only = 1; break;
 		case 'g': n_min_good = atoi(optarg); break;
+		case 's': BLOCK_LEN = atoi(optarg); break;
 		}
 	}
 	if (argc == optind) {
-		fprintf(stderr, "Usage: fq2psmcfa [-vx] [-q %d] [-g %d] <in.fq>\n", min_qual, n_min_good);
+		fprintf(stderr, "Usage: fq2psmcfa [-vx] [-q %d] [-g %d] [-s %d] <in.fq>\n", min_qual, n_min_good, BLOCK_LEN);
 		return 1;
 	}
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
