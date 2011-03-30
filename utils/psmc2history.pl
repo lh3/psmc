@@ -8,8 +8,8 @@ use Getopt::Std;
 exit;
 
 sub main {
-  my %opts = (n=>20);
-  getopts('n:', \%opts);
+  my %opts = (n=>20, u=>-1);
+  getopts('n:u:', \%opts);
   die("Usage: psmc2history.pl [-n $opts{n}] <in.psmc.par>\n") if (@ARGV == 0 && -t STDIN);
   my %h;
   $_ = <>;
@@ -28,8 +28,15 @@ sub main {
   my $a = $h{_};
   print "T $h{T}\nR $h{R}\n";
   print "N ", scalar(@{$h{_}}), "\n";
-  for my $x (0 .. @$a-1) {
-	print "H $a->[$x][0]\t$a->[$x][1]\n";
+  if ($opts{u} < 0) {
+	for my $x (0 .. @$a-1) {
+		print "H $a->[$x][0]\t$a->[$x][1]\n";
+	}
+  } else {
+  	my $N0 = $h{T} / 4 / $opts{u};
+  	for my $x (0 .. @$a-1) {
+		print "h ", $a->[$x][0] * 2 * $N0, "\t", $a->[$x][1] * $N0, "\n";
+	}
   }
 }
 
