@@ -8,9 +8,23 @@ use Getopt::Std;
 exit;
 
 sub main {
-  die("Usage: psmc2history.pl <in.psmc.par>\n") if (@ARGV == 0 && -t STDIN);
+  my %opts = (n=>20);
+  getopts('n:', \%opts);
+  die("Usage: psmc2history.pl [-n $opts{n}] <in.psmc.par>\n") if (@ARGV == 0 && -t STDIN);
   my %h;
-  &parse_param(join(" ", <>), \%h);
+  $_ = <>;
+  if (/^[A-Z][A-Z]/) {
+  	my $flag = 0;
+  	while (<>) {
+		$flag = 1 if (/^RD.(\d+)/ and $1 == $opts{n});
+		if ($flag and /^PA\t(.*)/) {
+			$_ = $1;
+			last;
+		}
+	}
+	die unless $flag; 
+  }
+  &parse_param($_, \%h);
   my $a = $h{_};
   print "T $h{T}\nR $h{R}\n";
   print "N ", scalar(@{$h{_}}), "\n";
