@@ -1,0 +1,691 @@
+\newif\ifPDF
+\ifx\pdfoutput\undefined\PDFfalse
+\else\ifnum\pdfoutput > 0\PDFtrue
+	\else\PDFfalse
+	\fi
+\fi
+
+\ifPDF
+	\documentclass[pdftex,10pt]{article}
+	\RequirePackage[hyperindex,colorlinks,plainpages=false]{hyperref}
+	\hypersetup{pdfauthor={Heng Li},linkcolor=blue,citecolor=blue,urlcolor=blue}
+	\usepackage{graphicx}
+	\DeclareGraphicsRule{*}{mps}{*}{}
+\else
+	\documentclass[10pt]{article}
+	\usepackage{graphicx}
+\fi
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\addtolength{\textwidth}{3cm}
+\addtolength{\hoffset}{-1.5cm}
+\addtolength{\textheight}{4cm}
+\addtolength{\voffset}{-2cm}
+
+\makeindex
+
+\usepackage{natbib}
+\bibliographystyle{apalike}
+
+\title{The Pairwise Sequentially Markovian Coalescent Model}
+\author{Heng Li and Richard Durbin}
+\date{24 January 2008}
+
+\begin{document}
+
+\theoremstyle{plain} \newtheorem{lem}{Lemma}
+\theoremstyle{plain} \newtheorem{thm}{Theorem}
+\theoremstyle{plain} \newtheorem{cor}{Corollary}
+\theoremstyle{remark} \newtheorem{rem}{Remark}
+
+\maketitle
+
+This document gives the mathematical basis for the PSMC, including all
+necessary theorems and equations, with discussion. Lemma~\ref{lem:f1}
+and~\ref{lem:sd} give two general facts which will be used
+later. Theorem~\ref{thm:psmc} proves several central results of the
+continuous-time PSMC model. This theorem establishes the foundation of
+the whole PSMC theory. Corollary~\ref{cor:djp} and
+Remark~\ref{rem:mutprob} show how to calculate or approximate various
+probabilities when time is discretized. Remark~\ref{rem:hmm} presents
+the construction of HMM, and Remark~\ref{rem:missdata} and
+\ref{rem:overfit} explain several catches in
+implementation. Remarks~\ref{rem:bootstrap}-\ref{rem:gof2} show methods
+on estimating the variance and testing the goodness of fit (GOF).
+
+\section{PSMC: The Pairwise Sequentially Markovian Model}
+
+\subsection{General Fomulae}
+
+This section presents two lemmas for general functions. Lemma~\ref{lem:f1}
+will be used to prove the normalization of the conditioned transition probability in the PSMC continuous-time Markov chain; Lemma~\ref{lem:sd}
+will be used to derive the stationary distribution of coalescent time.
+
+\begin{lem}\label{lem:f1}
+Given
+\begin{equation}\label{equ:f}
+  f(t|s)=h(t)\int_0^{\min\{s,t\}}\frac{g(u)}{\int_0^sg(w)\,dw} \cdot e^{-\int_u^th(v)\,dv}\,du
+\end{equation}
+where $g(t)$ and $h(t)$ are any functions that can be integrated on $[0,\infty)$, the
+following equation always stands:
+\[\int_0^{\infty}f(t|s)\,dt=1\]
+\end{lem}
+
+\begin{proof}
+Let:
+\[t=\phi(\tilde t)\]
+and
+\[\tilde g(\tilde u)=\frac{g(\phi(\tilde u))}{h(\phi(\tilde u))}\]
+where $\phi(\tilde t)$ satisfies $\phi(0)=0$ and
+\[\phi'(\tilde u)\cdot h(\phi(\tilde u))=1\]
+The integral becomes:
+\[f(t|s)\,dt=\frac{f(\phi(\tilde t)|\phi(\tilde s))}{h(\phi(\tilde t))}\,d\tilde t
+=\frac{\int_0^{\min\{\tilde s,\tilde t\}}\tilde g(\tilde u)e^{-(\tilde t-\tilde u)}d\tilde u}
+{\int_0^{\tilde s}\tilde g(\tilde u)d\tilde u}\,d\tilde t\]
+If we note that for any $g(t)$ that can be integrated:
+\begin{eqnarray*}
+  &&\int_0^{\infty}e^{-v}dv\int_0^{\min\{v,t\}}g(u)e^u\,du\\
+  &=&\int_0^tg(u)e^udu\Bigg(\int_u^te^{-v}dv+\int_t^{\infty}e^{-v}dv\Bigg)\\
+  &=&\int_0^tg(u)\,du
+\end{eqnarray*}
+always stands, we get:
+\[\int_0^{\infty}f(t|s)\,dt=\int_0^{\infty}\frac{\int_0^{\min\{\tilde s,\tilde t\}}\tilde g(\tilde u)e^{-(\tilde t-\tilde u)}d\tilde u}
+{\int_0^{\tilde s}\tilde g(\tilde u)d\tilde u}\,d\tilde t=1\]
+\end{proof}
+
+\begin{lem}[Stationary distribution]\label{lem:sd}
+  Let:
+  \begin{equation}\label{equ:pi}
+    \pi(t)=\frac{h(t)}{C}e^{-\int_0^th(v)dv}\int_0^tg(u)\,du
+  \end{equation}
+  where $C$ is a scaling constant:
+  \begin{equation}
+    C=\int_0^{\infty}g(u)e^{-\int_0^uh(v)dv}\,du
+  \end{equation}
+  The following equations always stand:
+  \begin{equation*}
+    \int_0^{\infty}f(t|s)\pi(s)\,ds=\pi(t)
+  \end{equation*}
+  \begin{equation*}
+    \int_0^{\infty}\pi(t)\,dt=1
+  \end{equation*}
+\end{lem}
+
+\begin{proof}
+\begin{eqnarray*}
+&&\int_0^{\infty}f(t|s)\pi(s)\,ds\\
+&=&\frac{h(t)}{C}\int_0^{\infty}\frac{ds}{\int_0^sg(w)\,dw}\cdot
+\Bigg[h(s)e^{-\int_0^sh(v)dv}\int_0^sg(w)\,dw\bigg]
+\int_0^{\min\{s,t\}}g(u)\,e^{-\int_u^th(v)dv}\,du\\
+&=&\frac{h(t)}{C}\int_0^{\infty}h(s)e^{-\int_0^sh(v)dv}ds
+\int_0^{\min\{s,t\}}g(u)\,e^{-\int_u^th(v)dv}\,du\\
+&=&\frac{h(t)}{C}\int_0^tg(u)\,e^{-\int_u^th(v)dv}\,du
+\int_u^{\infty}e^{-\int_0^sh(v)dv}h(s)\,ds\\
+&=&\frac{h(t)}{C}\int_0^tg(u)\,e^{-\int_u^th(v)dv}\,du\int_u^{\infty}
+d\,\Big[-e^{-\int_0^sh(v)\,dv}\Big]\\
+&=&\frac{h(t)}{C}\int_0^tg(u)\,e^{-\int_u^th(v)dv}\,e^{-\int_0^uh(v)dv}\,du\\
+&=&\frac{h(t)}{C}e^{-\int_0^th(v)dv}\int_0^tg(u)\,du
+\end{eqnarray*}
+i.e.:
+$$\int_0^{\infty}f(t|s)\pi(s)\,ds=\pi(t)$$
+Then $\pi(t)$ is the density of the stationary distribution. Furthermore, as we require that
+\begin{eqnarray*}
+1&=&\int_0^{\infty}\pi(t)\,dt\\
+&=&\int_0^{\infty}\frac{h(t)}{C}e^{-\int_0^th(v)dv}\,dt\int_0^tg(u)\,du\\
+&=&\int_0^{\infty}g(u)\,du\int_u^{\infty}\frac{h(t)}{C}e^{-\int_0^th(v)dv}\,dt\\
+&=&\frac{1}{C}\int_0^{\infty}g(u)\,du\int_u^{\infty}d\,
+\Big[-e^{-\int_0^th(v)\,dv}\Big]\\
+&=&\frac{1}{C}\int_0^{\infty}g(u)e^{-\int_0^uh(v)dv}\,du
+\end{eqnarray*}
+the constant $C$ can thus be calculated.
+\end{proof}
+
+\subsection{List of Symbols}
+\begin{center}
+\begin{tabular}{lll}
+\hline
+Symbol & Type & Meaning \\
+\hline
+$a,b$ & discrete & Coordinate on the sequence\\
+$t,s,\Delta$ & continuous & Coalescent time \\
+$T_a$ & continuous, r.v. & Coalescent time at $a$ \\
+$R_a$ & binary, r.v. & Recombination or not between $a$ and $a+1$ \\
+$X_a$ & binary, r.v. & Mutation or not at $a$ \\
+$N,N_0$ & continuous & Population size \\
+$\lambda,\lambda_0$ & continuous & Relative population size \\
+$\theta,\theta_0$ & continuous & Per-site mutation rate \\
+$\rho,\rho_0$ & continuous & Per-site recombination rate \\
+$p,q$ & function & transition probability \\
+$i,j,k,l$ & discrete & State of the HMM \\
+$u,v,w$ & continuous & Coalescent time (in integration) \\
+$C,C_{\pi},C_{\sigma}$ & continous & Scaling constant \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{PSMC Model}
+
+In this section, Theorem~\ref{thm:psmc} estabilishes the foundation of
+the PSMC continuous-time Markov chain. It gives the equations of transition,
+and the stationary distribution. The following corollaries
+show how to approximate the constants in the Theorem when the scaled mutation
+and recombination rates are small.
+
+The discrete-time Markov chain, which will be presented in the next section,
+is derived from the continuous-time Markov chain by integrating probability desities
+in time intervals.
+
+\begin{thm}[PSMC]\label{thm:psmc}
+  Let the population size be:
+  \begin{equation*}
+    N(t)=N_0\lambda(t)
+  \end{equation*}
+  where $t$ equals the number of generations divided by $2N_0$. The
+  scaled mutation rate and recombination rate per nucleotide are
+  $\theta$ and $\rho$.  respectively. Given two haplotypes, let $T_a$ be
+  the coalescent time at position $a\in[1,L]$, and define:
+  \begin{equation*}
+    R_a=\left\{\begin{array}{ll}
+        1 & \mbox{a recombination happens between $a$ and $a+1$} \\
+        0 & \mbox{otherwise}
+      \end{array}\right.
+  \end{equation*}
+  \begin{equation*}
+    \Lambda(t)=\int_0^t\lambda(u)\,du
+  \end{equation*}
+  \begin{equation}
+    C_{\pi}=\int_0^{\infty}e^{-\int_0^u\frac{dv}{\lambda(v)}}\,du
+  \end{equation}
+  \begin{equation}
+    C_{\sigma}=\int_0^{\infty}\frac{\pi(t)}{1-e^{-\rho t}}dt
+  \end{equation}
+  According to the SMC (Sequentially Markov Coalescent)
+  model~\citep{McVean:2005lr,Marjoram:2006fk}, the following equations stand:
+  \begin{equation}\label{equ:q}
+    q(t|s)\,dt=\Pr\{T_{a+1}=t|T_a=s,R_a=1\}
+    =\frac{dt}{\lambda(t)}\int_0^{\min\{s,t\}}\frac{1}{s}\cdot e^{-\int_u^t\frac{dv}{\lambda(v)}}\,du
+  \end{equation}
+  \begin{equation}\label{equ:pi2}
+    \pi(t)=\Pr\{T_{a+1}=t|R_a=1\}=\frac{t}{C_{\pi}\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}
+  \end{equation}
+  \begin{equation}\label{equ:a}
+    p(t|s)=\Pr\{T_{a+1}=t|T_a=s\}=(1-e^{-\rho s})q(t|s) + e^{-\rho s}\delta(t-s)
+  \end{equation}
+  \begin{equation}\label{equ:sigma1}
+    \sigma(t)=\Pr\{T_a=t\}=\frac{\pi(t)}{C_{\sigma}(1-e^{-\rho t})}
+  \end{equation}
+  \begin{equation}\label{equ:px}
+    \Pr\{R_a=1\}=\frac{1}{C_{\sigma}}
+  \end{equation}
+  Furthermore,
+  \begin{equation}\label{equ:pi3}
+    \int_0^{\infty}q(t|s)\pi(s)\,ds=\pi(t)
+  \end{equation}
+  \begin{equation}\label{equ:sigma2}
+    \int_0^{\infty}p(t|s)\sigma(s)\,ds=\sigma(t)
+  \end{equation}
+  and
+  \begin{equation}
+    \int_0^{\infty}q(t|s)\,dt=\int_0^{\infty}p(t|s)\,dt=\int_0^{\infty}\pi(t)\,dt
+    =\int_0^{\infty}\sigma(t)\,dt=1
+  \end{equation}
+\end{thm}
+
+\begin{proof}
+  Equation~\ref{equ:q} is the root of all the other equations.
+
+  \begin{enumerate}
+
+  \item When a recombination happens, the probability that it happens in $[u,u+du)$ is:
+  \[P_1(u|s)\,du=\frac{1}{s}\,du\]
+  At time $u$, two alleles coalesce at $[t,t+dt)$ is~\citep{Hein:2005yq,Griffiths:1994fk}:
+  \[P_2(t|u)\,dt=\frac{1}{\lambda(t)}\exp\Bigg\{-\int_u^t\frac{dv}{\lambda(v)}\Bigg\}\,dt\]
+  When we know $s$ and $t$, $u\in[0,\min\{s,t\})$. Then:
+  \[q(t|s)=\int_0^{\min\{s,t\}}P_2(t|u)\cdot P_1(u|s)\,du
+  =\frac{1}{\lambda(t)}\int_0^{\min\{s,t\}}\frac{1}{s}
+  \cdot e^{-\int_u^t\frac{dv}{\lambda(v)}}\,du\]
+  This proves Equation~\ref{equ:q}.
+  
+  \item In Lemma~\ref{lem:f1} and Lemma~\ref{lem:sd}, let $g(u)=1$ and
+  $h(u)=1/\lambda(u)$. We have:
+  \[\int_0^{\infty}q(t|s)\,dt=1\]
+  \[\int_0^{\infty}q(t|s)\pi(s)\,ds=\pi(t)\]
+  This proves Equation~\ref{equ:pi2} and~\ref{equ:pi3}.
+
+  \item Equation~\ref{equ:a} comes \emph{naturally}, and
+    \[ \int_0^{\infty}p(t|s)=(1-e^{-\rho s})\int_0^{\infty}q(t|s)\,dt + e^{-\rho s}=1 \]
+  \begin{eqnarray*}
+    \int_0^{\infty}p(t|s)\sigma(s)\,ds&=&\frac{1}{C_a}\int_0^{\infty}(1-e^{-\rho s})
+    \frac{q(t|s)\pi(s)}{1-e^{-\rho s}}\,ds
+    +\frac{e^{-\rho t}}{C_{\sigma}(1-e^{-\rho t})}\pi(t)\\
+    &=&\frac{\pi(t)}{C_{\sigma}(1-e^{-\rho t})}\\
+    &=&\sigma(t)
+  \end{eqnarray*}
+  This proves Equation~\ref{equ:sigma1} and~\ref{equ:sigma2}.
+
+  \item Given coalescent time $T_a=t$, the probability that a
+  recombination happens between $a$ and $a+1$ is:
+  \begin{equation*}
+    \Pr\{R_a=1|T_a=t\}=1-e^{-\rho t}
+  \end{equation*}
+  Then
+  \[\Pr\{R_a=1\}=\int_0^{\infty}(1-e^{-\rho t})\sigma(t)\,dt=\frac{1}{C_{\sigma}}\]
+  This proves Equation~\ref{equ:px}.
+
+  \end{enumerate}
+\end{proof}
+
+\begin{cor}[Approximating $C_{\sigma}$]\label{cor:sigma}
+  When $\rho_0$ is sufficiently small:
+  \begin{equation}
+    C_{\sigma}=\frac{1}{C_{\pi}\rho}+\frac{1}{2}+o(\rho)
+  \end{equation}
+\end{cor}
+\begin{proof}
+  \begin{eqnarray*}
+  C_{\sigma}&=&\int_0^{\infty}\frac{t}{C_{\pi}\lambda(t)[1-e^{-\rho t}]}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,dt\\
+  &=&\frac{1}{C_{\pi}\rho}\int_0^{\infty}\Big[1+\frac{\rho t}{2}+o(\rho^2)\Big]
+  \frac{1}{\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,dt\\
+  &=&\frac{1}{C_{\pi}\rho}\int_0^{\infty}\frac{1}{\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,dt
+  +\frac{1}{2}\int_0^{\infty}\pi(t)\,dt+o(\rho)\\
+  &=&\frac{1}{C_{\pi}\rho}+\frac{1}{2}+o(\rho)
+  \end{eqnarray*}
+\end{proof}
+
+\begin{cor}[Rate of pairwise difference]\label{cor:theta}
+  When both $\theta_0$ and $\rho_0$ are sufficiently small:
+  \begin{equation}\label{equ:theta}
+    \Pr\{X_a=1\}=C_{\pi}\theta\cdot\big[1+o(\rho+\theta)\big]
+  \end{equation}
+\end{cor}
+\begin{proof}
+  \begin{eqnarray*}
+    \Pr\{X_a=1\}&=&\int_0^{\infty}\Pr\{X_a=1|T_a=t\}\Pr\{T_a=t\}\,dt\\
+    &=&\int_0^{\infty}(1-e^{-\theta t})\sigma(t)\,dt\\
+    &=&\frac{1}{C_{\sigma}}\int\frac{1-e^{-\theta t}}{1-e^{-\rho t}}\pi(t)\,dt\\
+    &=&\frac{1}{C_{\sigma}}\int\frac{\theta+o(\theta^2)}{\rho+o(\rho^2)}\pi(t)\,dt\\
+    &=&\frac{\theta}{C_{\sigma}\rho}\int\Big[1+o(\rho+\theta)\Big]\pi(t)\,dt\\
+    &=&C_{\pi}\theta\cdot\big[1+o(\rho+\theta)\big]
+  \end{eqnarray*}
+\end{proof}
+
+\begin{cor}[First-order approximation]
+  Under the first-order approximation with respect to $\theta$ and
+  $\rho$, the following equations stand:
+  \[
+  \Pr\{R_a=1\}=\frac{1}{C_{\pi}}=C_{\pi}\rho
+  \]
+  \[
+  \Pr\{X_a=1\}=C_{\pi}\theta
+  \]
+  \[
+  \sigma(t)=\frac{1}{\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}
+  \]
+  \[
+  \int_0^t\sigma(u)\,du=1-e^{-\int_0^t\frac{dv}{\lambda(v)}}
+  \]
+\end{cor}
+
+\begin{rem}[Distribution of segment lengths]\label{cor:seglen}
+  Let $L_{a+1}$ be the length of the segment following a recombination
+  occurring at $a$. Conditional on the recombination, $L_{a+1}$ follows
+  a exponential distribution (more precisely, a geometric distribution
+  in fact):
+  \[
+  \Pr\{L_{a+1}=l|R_a=1,T_{a+1}=t\}\,dl = \rho te^{-\rho tl}\,dl
+  \]
+  Then,
+  \[
+  \Pr\{L=l\}\,dl=dl\int_0^{\infty}\frac{\rho t^2e^{-\rho tl}}{C_{\pi}\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,dt
+  =dl\,\frac{\rho}{C_{\pi}}\int_0^{\infty}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,d\Big(t^2e^{-\rho tl}\Big)
+  \]
+  The mean segment length is thus
+  \begin{eqnarray*}
+  &&\int_0^{\infty}\rho tl e^{-\rho tl}\,dl\int_0^{\infty}\frac{t}{C_{\pi}\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,dt\\
+  &=&\frac{1}{C_{\pi}\rho}\int_0^{\infty}\frac{1}{\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}\,dt\\
+  &=&\frac{1}{C_{\pi}\rho}\approx C_{\sigma}
+  \end{eqnarray*}
+\end{rem}
+
+%\begin{cor}[PSMC']\label{cor:psmc2}
+%  According to SMC', the following equation stands:
+%  \begin{eqnarray*}
+%    q'(t|s)\,dt&=&\Pr\{T_{a+1}=t|T_a=s,R_a=1\}\\
+%    &=&\frac{1}{2}\delta(t-s)\Bigg[1-\int_0^s\frac{\lambda(u)\,du}{\int_0^s\lambda(w)\,dw}
+%    e^{-\int_u^s\frac{2\,dv}{\lambda(v)}}\Bigg]\\
+%    &&+\frac{dt}{\lambda(t)}\int_0^{\min\{s,t\}}\frac{\lambda(u)\,du}{\int_0^s\lambda(w)\,dw}
+%    \cdot e^{-\int_u^{\min\{s,t\}}\frac{dv}{\lambda(v)}-\int_u^t\frac{dv}{\lambda(v)}}
+%  \end{eqnarray*}
+%\end{cor}
+%\begin{proof}
+%  At time $u$, there are three alleles $1$, $2$ and $3$. Allele $1$
+%  coalesces with $2$ at time $[s,s+ds)$. If $2$ and $3$ coalesce at
+%  $[t,t+dt)$, the probability is:
+%  \begin{eqnarray*}
+%    &&\frac{1}{3}\cdot3\cdot\frac{1}{\lambda(t)}e^{-\int_u^t\frac{3\,dv}{\lambda(v)}}\cdot\frac{1}{\lambda(s)}
+%    e^{-\int_t^s\frac{dv}{\lambda(v)}}\,dtds\\
+%    &=&\frac{1}{\lambda(t)}e^{-\int_u^t\frac{2\,dv}{\lambda(v)}}\cdot\frac{1}{\lambda(s)}
+%    e^{-\int_u^s\frac{dv}{\lambda(v)}}\,dtds
+%  \end{eqnarray*}
+%  If $1$ and $2$ coalesce first and then coalesce with $3$ at $[t,t+dt)$,
+%  the probability is:
+%  \begin{eqnarray*}
+%    &&\frac{1}{3}\cdot3\cdot\frac{1}{\lambda(s)}e^{-\int_u^s\frac{3\,dv}{\lambda(dv)}}\cdot\frac{1}{\lambda(t)}
+%    e^{-\int_s^t\frac{dv}{\lambda(v)}}\,dtds\\
+%    &=&\frac{1}{\lambda(t)}e^{-\int_u^s\frac{2\,dv}{\lambda(v)}}\cdot\frac{1}{\lambda(s)}
+%    e^{-\int_u^t\frac{dv}{\lambda(v)}}\,dtds
+%  \end{eqnarray*}
+%  Condition on $s$ and $3$ coalesces with $1$ or above, we have:
+%  \begin{equation*}
+%    P'_2(t|u)\,dt=\frac{dt}{\lambda(t)}e^{-\int_u^{\min\{s,t\}}\frac{dv}{\lambda(v)}-\int_u^t\frac{dv}{\lambda(v)}}
+%  \end{equation*}
+%
+%  If a recombination happens, the probability that it happens at
+%  $[u,u+du)$ is:
+%  \[P_1(u|s)\,du=\frac{\lambda(u)}{\int_0^s\lambda(w)\,dw}\,du\]
+%  Then the probability that $3$ coalesces with $2$ under $s$ is:
+%  \begin{equation*}
+%    \int_0^s\,dt\int_0^tP'_2(t|u)P_1(u|s)\,du=\int_0^s\frac{dt}{\lambda(t)}\int_0^t
+%    e^{-\int_u^t\frac{2\,dv}{\lambda(v)}}\frac{\lambda(u)\,du}{\int_0^s\lambda(w)\,dw}
+%    =\frac{1}{2}\Bigg[1-\int_0^s\frac{\lambda(u)\,du}{\int_0^s\lambda(w)\,dw}e^{-\int_u^s\frac{2\,dv}{\lambda(v)}}\Bigg]
+%  \end{equation*}
+%\end{proof}
+%
+%\begin{rem}
+%  Due to the theoretical complication, Corollary~\ref{cor:psmc2} is not
+%  used in practice.
+%\end{rem}
+
+\subsection{Discrete-Time PSMC Model}
+
+This section presents the discrete-time PSMC Markov Chain, its transition probabilities
+between time intervals and the stationary distribution. The proof of Corolary~\ref{cor:djp}
+is given in the Appendix.
+
+\begin{cor}[Discrete-time PSMC]\label{cor:djp}
+  Let
+  \[ 0=t_0<t_1<\cdots<t_n<t_{n+1}=\infty \]
+  Assume in each time interval $[t_k,t_{k+1})$ function $\lambda(t)$ is a
+  constant $\lambda_k$. Define:
+  \begin{equation*}
+    \pi_k=\int_{t_k}^{t_{k+1}}\pi(t)\,dt
+  \end{equation*}
+  \begin{equation*}
+    \sigma_k=\int_{t_k}^{t_{k+1}}\sigma(t)\,dt
+  \end{equation*}
+  \begin{equation*}
+    q_{kl}=\frac{1}{\pi_k}\int_{t_k}^{t_{k+1}}ds\int_{t_l}^{t_{l+1}}q(t|s)\pi(s)\,dt
+  \end{equation*}
+  \begin{equation*}
+    p_{kl}=\frac{1}{\sigma_k}\int_{t_k}^{t_{k+1}}ds\int_{t_l}^{t_{l+1}}p(t|s)\sigma(s)\,dt
+  \end{equation*}
+  Then:
+  \begin{equation*}
+    \pi_k=\frac{1}{C_{\pi}}\Bigg[(\alpha_k-\alpha_{k+1})\Big(\sum_{i=0}^{k-1}\tau_i+\lambda_k\Big)
+    -\alpha_{k+1}\tau_k\Bigg]
+  \end{equation*}
+  \begin{equation}\label{equ:sigmak}
+    \sigma_k=\frac{1}{C_{\sigma}}
+    \Bigg[\frac{1}{C_{\pi}\rho}(\alpha_k-\alpha_{k+1})+\frac{\pi_k}{2}+o(\rho)\Bigg]
+  \end{equation}
+  Furthermore, for $l<k$:
+  \begin{equation*}
+    q_{kl}=\frac{\alpha_k-\alpha_{k+1}}{C_{\pi}\pi_k}\Bigg[(\alpha_l-\alpha_{l+1})\Big(\beta_l-\frac{\lambda_l}{\alpha_l}\Big)
+    +(t_{l+1}-t_l)\Bigg]
+  \end{equation*}
+  for $l=k$:
+  \begin{equation*}
+    q_{kl}=\frac{1}{C_{\pi}\pi_k}\Bigg[(\alpha_k-\alpha_{k+1})^2\Big(\beta_k-\frac{\lambda_k}{\alpha_k}\Big)
+    +2\lambda_k(\alpha_k-\alpha_{k+1})-2\alpha_{k+1}(t_{k+1}-t_k)\Bigg]
+  \end{equation*}
+  and for $l>k$:
+  \begin{equation*}
+    q_{kl}=\frac{\alpha_l-\alpha_{l+1}}{C_{\pi}\pi_k}
+  \Bigg[(\alpha_k-\alpha_{k+1})\Big(\beta_k-\frac{\lambda_k}{\alpha_k}\Big)+(t_{k+1}-t_k)\Bigg]
+  \end{equation*}
+  and
+  \begin{equation}\label{equ:pkl}
+    p_{kl}=\frac{\pi_k}{C_{\sigma}\sigma_k}q_{kl} + \delta_{kl}\Big(1-\frac{\pi_k}{C_{\sigma}\sigma_k}\Big)
+  \end{equation}
+  where:
+  \begin{equation*}
+    \tau_k = t_{k+1}-t_k
+  \end{equation*}
+  \begin{equation*}
+    \alpha_k=\exp\Bigg(-\sum_{i=0}^{k-1}\frac{t_{i+1}-t_i}{\lambda_i}\Bigg)
+  \end{equation*}
+  \begin{equation*}
+    \beta_k=\sum_{i=0}^{k-1}\lambda_i\Big(\frac{1}{\alpha_{i+1}}-\frac{1}{\alpha_i}\Big)
+  \end{equation*}
+  \begin{equation*}
+    C_{\pi}=\sum_{k=0}^n\lambda_k(\alpha_k-\alpha_{k+1})
+  \end{equation*}
+\end{cor}
+
+\begin{rem}[Mutation probability]\label{rem:mutprob}
+  The average mutation probability in an interval $[t_k,t_{k+1})$ cannot
+  be analytically calculated. But we can seek another way. From
+  Equation~\ref{equ:pkl}, a recombination occurs in $[t_k,t_{k+1})$ as if
+  it occurs at time
+  $-\log\Big[1-\pi_k/(C_{\sigma}\sigma_k)\Big]/\rho$. If we assume
+  mutation also exactly occurs at this time point, the probability of a
+  mutation is:
+  \begin{equation}\label{equ:ek1}
+    e_k(1) = \exp\Bigg[-\frac{\theta}{\rho}\log\Big(1-\frac{\pi_k}{C_{\sigma}\sigma_k}\Big)\Bigg]
+    = \Big(1-\frac{\pi_k}{C_{\sigma}\sigma_k}\Big)^{\theta/\rho}
+  \end{equation}
+\end{rem}
+
+\begin{rem}[Determining $N_0$]\label{rem:n0}
+  If we know $\mu$, the neutral mutation rate, $N_0=\theta/4\mu$. On
+  autosomes, $\mu$ is typically
+  $2.5\times10^{-8}$~\citep{Nachman:2000rq}. Note that
+  Equation~\ref{equ:theta} agrees with~\citet{Marth:2004vn} in case of
+  two haplotypes.
+\end{rem}
+
+\section{PSMC Hidden Markov Model}
+
+\subsection{The basic of HMM}
+
+\begin{rem}[PSMC-HMM]\label{rem:hmm}
+  We denote a hidden state in the HMM by $k$, which means a coalescence
+  between the two haplotypes at this point in the sequence lies in the
+  time interval $[t_k,t_{k+1})$. A mutation is emmitted with a
+  probability $e_k(1)$ (Equation~\ref{equ:ek1}) and the transition
+  probability is $p_{kl}$ (Equation~\ref{equ:pkl}). The stationary
+  distribution of the hidden states is $\{\sigma_k\}$
+  (Equation~\ref{equ:sigmak}). All these parameters can be analytically
+  approximated with a precision of order-two Taylor expansion when
+  $\rho_0$ is sufficiently small.
+\end{rem}
+
+\begin{rem}[PSMC-PHMM]\label{rem:phmm}
+  It is possible to use PSMC to approximately model two diploid
+  sequences. In this case, a hidden state is $(k,l)$ and the transition
+  probability of $(k,l)\to(k',l')$ is $p_{kk'}p_{ll'}$. The stationary
+  distribution of hidden states is $\{\sigma_k\sigma_{k'}\}$.
+\end{rem}
+
+\begin{rem}[Missing data]\label{rem:missdata}
+  Missing data can be easily incorporated into an HMM. When there is no
+  observation at $a$, $e_k(x_a)=1$ for all $k$.
+\end{rem}
+
+\begin{rem}[Choosing time intervals]
+  We choose a set of $\{t_i\}_{i=0\ldots n}$ that are approximately
+  evenly distributed in the log space, but because we require $t_0=0$,
+  the intervals will not strictly evenly distributed. In practice, we
+  set \[t_i=0.1(e^{\frac{i}{n}\log(1+10T_{max})}-1)\] where
+  $T_{max}=t_n$ is chosen such that no more than a few percent of
+  coalescences occur beyond $T_{max}$.
+\end{rem}
+
+\begin{rem}[Reducing parameters]\label{rem:overfit}
+  In principle, we can estimate all the $n+1$ values of $\lambda_k$ with
+  EM. However, at both small and large $t$, the expected number of
+  segments is very small. Separate estimates of $\lambda_k$ in these
+  intervals will lead to overfitting due to insufficient data. An
+  effective way to tell whether overfitting occurs is to check
+  $C_{\sigma}\pi_k$, the expected number of segments in the interval
+  $[t_k,t_{k+1})$. If this number is small (less than $20$, for
+  instance), the $\lambda_k$ estimated from EM cannot be trusted due to
+  statistical fluctuations. In this case, we should use fewer free
+  parameters by using the same $\lambda$ spanning several adjacent
+  intervals. This will lower the resolution but will yield much better
+  estimation.
+\end{rem}
+
+\subsection{Assessing variance and fitness}
+
+\begin{rem}[Bootstrapping]\label{rem:bootstrap}
+  The variance can be estimated by boostrapping. We split the input
+  diploid sequence into $L'$-long non-overlapping segments and randomly
+  resample the segments with replacement to generate a new diploid
+  sequence of the same length as the original one.  Parameters are then
+  estimated from the new sequence. We repeat this process $B$ times and
+  regard the variance of the $B$ resampled estimates as the variance of
+  the estimate on the original sequence. Typically, we take
+  $L'=30,000,000$ and $B=100$.
+\end{rem}
+
+\begin{rem}[Measuring GOF with $\sigma_k$]\label{rem:gof-pi}
+  On one hand, from Equation~\ref{equ:sigmak} we can calculate
+  $\sigma_k$ from free parameters of the model without looking at the
+  data. On the other hand, from forward-backward algorithm we can
+  estimate the posterior expectation of the occurences $\hat{c}_k$
+  of state $k$:
+  \begin{equation*}
+    \hat{c}_k=\frac{1}{P(D)}\sum_if_k(i)b_k(i)
+  \end{equation*}
+  Normalizing $\hat{c}_k$ gives:
+  \begin{equation*}
+    \hat{\sigma}_k=\frac{\sum_if_k(i)b_k(i)}{\sum_{k,i}f_k(i)b_k(i)}
+  \end{equation*}  
+  where $f_k(i)$ is the forward function of sequence position $i$ and
+  state $k$ and $b_k(i)$ is the backward function. If the model fits the
+  data, we would expect to see $\{\hat{\sigma}_k\}$ is identical to
+  $\{\sigma_k\}$. And therefore the relative entroy
+  $D(\sigma||\hat{\sigma})$ would be an indicator of GOF:
+  \begin{equation*}
+    G^{\sigma}=\sum_k\sigma_k\log\frac{\sigma_k}{\hat{\sigma}_k}
+  \end{equation*}
+\end{rem}
+
+\begin{rem}[Measuring GOF with $l$-long subsequences]\label{rem:gof2}
+  \citet{MacKay-Altman:2004lr} pointed out we can test GOF by comparing
+  the distribution of $l$-long subsequences from direct calculation with
+  the observed distribution. Given an integer $n\in[0,2^l-1]$, let
+  $\{p_n\}$ be the theoretical distribution of the binary sequence
+  represented by $n$ and let $\{\hat{p}_n\}$ be the one directly counted
+  from the observed sequence. The relative entroy between them is:
+  \begin{equation*}
+    G_l=\sum_{n=0}^{2^l-1}p_n\log\frac{p_n}{\hat{p}_n}
+  \end{equation*}
+  which measures GOF. Typically, $l$ is ranged from 10 to 20.
+\end{rem}
+
+\appendix
+
+\section{Proof of Corollary~\ref{cor:djp}}\label{sec:pfl1}
+
+\begin{proof}
+
+\[
+  C_{\pi}=\int_0^{\infty}e^{-\int_0^u\frac{dv}{\lambda(v)}}\,du
+=\sum_{k=0}^{n}\alpha_k\int_{t_k}^{t_{k+1}} e^{-\frac{u-t_k}{\lambda_k}}du
+=\sum_{k=0}^n\lambda_k(\alpha_k-\alpha_{k+1})
+\]
+
+\begin{eqnarray*}
+  \pi_k&=&\int_{t_k}^{t_{k+1}}\pi(t)\,dt\\
+  &=&\frac{1}{C_{\pi}}\int_{t_k}^{t_{k+1}}\frac{dt}{\lambda(t)}e^{-\int_0^t\frac{dv}{\lambda(v)}}\cdot t\\
+  &=&\frac{1}{C_{\pi}\lambda_k}\int_{t_k}^{t_{k+1}}\alpha_k e^{-\frac{t-t_k}{\lambda_k}}\Bigg[\sum_{i=0}^{k-1}\tau_i
+  +(t-t_k)\Bigg]\,dt\\
+  &=&\frac{\alpha_k}{C_{\pi}\lambda_k}\Bigg[\sum_{i=0}^{k-1}\tau_i\int_{t_k}^{t_{k+1}}e^{-\frac{t-t_k}{\lambda_k}}dt
+  +\int_{t_k}^{t_{k+1}}(t-t_k)e^{-\frac{t-t_k}{\lambda_k}}dt\Bigg]\\
+  &=&\frac{\alpha_k}{C_{\pi}\lambda_k}\Bigg[\lambda_k\sum_{i=0}^{k-1}\tau_i\Big(1-e^{-\frac{\tau_k}{\lambda_k}}\Big)
+  +\lambda_k^2\int_0^{\frac{\tau_k}{\lambda_k}}ue^{-u}du\Bigg]\\
+  &=&\frac{\alpha_k}{C_{\pi}}\Bigg[\sum_{i=0}^{k-1}\tau_i\Big(1-e^{-\frac{\tau_k}{\lambda_k}}\Big)
+  +\Big(\lambda_k-\lambda_k e^{-\frac{\tau_k}{\lambda_k}}-\tau_k e^{-\frac{\tau_k}{\lambda_k}}\Big)\Bigg]\\
+  &=&\frac{1}{C_{\pi}}\Bigg[(\alpha_k-\alpha_{k+1})\Big(\sum_{i=0}^{k-1}\tau_i+\lambda_k\Big)
+  -\alpha_{k+1}\tau_k\Bigg]
+\end{eqnarray*}
+
+\begin{eqnarray*}
+  \sigma_k&=&\int_{t_k}^{t_{k+1}}\sigma(t)\,dt\\
+  &=&\int_{t_k}^{t_{k+1}}\frac{1}{C_{\sigma}(1-e^{-\rho t})}\cdot\frac{t}{C_{\pi}\lambda(t)}
+  e^{\int_0^t\frac{dv}{\lambda(v)}}\,dt\\
+  &=&\frac{1}{C_{\sigma}C_{\pi}\rho}\int_{t_k}^{t_{k+1}}\Big[1+\frac{1}{2}\rho t+o(\rho^2)\Big]
+  \frac{1}{\lambda(t)}e^{\int_0^t\frac{dv}{\lambda(v)}}\,dt\\
+  &=&\frac{1}{C_{\sigma}C_{\pi}\rho}\Bigg[\int_{t_k}^{t_{k+1}}\frac{1}{\lambda(t)}e^{\int_0^t\frac{dv}{\lambda(v)}}\,dt
+  +\frac{1}{2}C_{\pi}\rho\int_{t_k}^{t_{k+1}}\pi(t)\,dt+o(\rho^2)\Bigg]\\
+  &=&\frac{1}{C_{\sigma}}\Bigg[\frac{1}{C_{\pi}\rho}(\alpha_k-\alpha_{k+1})
+  +\frac{\pi_k}{2}+o(\rho)\Bigg]
+\end{eqnarray*}
+
+\begin{eqnarray*}
+  q_{kl}&=&\frac{1}{\pi_k}\int_{t_k}^{t_{k+1}}ds\int_{t_l}^{t_{l+1}}q(t|s)\pi(s)\,dt\\
+  &=&\frac{1}{C_{\pi}\pi_k}\int_{t_k}^{t_{k+1}}\frac{1}{\lambda(s)}e^{-\int_0^s\frac{dv}{\lambda(v)}}\,ds
+  \int_{t_l}^{t_{l+1}}\frac{dt}{\lambda(t)}\int_0^{\min\{s,t\}}e^{-\int_{u}^{t}\frac{dw}{\lambda(w)}}du\\
+  &=&\frac{\alpha_k}{C_{\pi}\pi_k\lambda_k\lambda_l}\int_{t_k}^{t_{k+1}}e^{-\frac{s-t_k}{\lambda_k}}\,ds
+  \int_{t_l}^{t_{l+1}}dt\int_0^{\min\{s,t\}}e^{-\int_{u}^{t}\frac{dw}{\lambda(w)}}du
+\end{eqnarray*}
+
+$l<k$:
+\begin{eqnarray*}
+  q_{kl} &=&\frac{\alpha_k-\alpha_{k+1}}{C_{\pi}\pi_k\lambda_l}
+  \int_{t_l}^{t_{l+1}}dt\,\Bigg(e^{-\frac{t-t_l}{\lambda_l}}\sum_{i=0}^{l-1}\frac{\alpha_l}{\alpha_i}
+  \int_{t_i}^{t_{i+1}}e^{\frac{u-t_i}{\lambda_i}}\,du+\int_{t_l}^{t}e^{-\frac{t-u}{\lambda_l}}\,du\Bigg)\\
+  &=&\frac{\alpha_k-\alpha_{k+1}}{C_{\pi}\pi_k\lambda_l}
+  \int_{t_l}^{t_{l+1}}dt\,\Bigg[\alpha_le^{-\frac{t-t_l}{\lambda_l}}\sum_{i=0}^{l-1}\lambda_i
+  \Big(\frac{1}{\alpha_{i+1}}-\frac{1}{\alpha_i}\Big)+\lambda_l\Big(1-e^{-\frac{t-t_l}{\lambda_l}}\Big)\Bigg]\\
+  &=&\frac{\alpha_k-\alpha_{k+1}}{C_{\pi}\pi_k}
+  \Big[\Big(1-\frac{\alpha_{l+1}}{\alpha_l}\Big)\beta_l\alpha_l+(t_{l+1}-t_l)-\lambda_l
+  \Big(1-\frac{\alpha_{l+1}}{\alpha_l}\Big)\Big]\\
+  &=&\frac{\alpha_k-\alpha_{k+1}}{C_{\pi}\pi_k}\Bigg[(\alpha_l-\alpha_{l+1})\Big(\beta_l-\frac{\lambda_l}{\alpha_l}\Big)
+  +(t_{l+1}-t_l)\Bigg]
+\end{eqnarray*}
+
+$l>k$:
+\begin{eqnarray*}
+  q_{kl}&=&\frac{\alpha_k}{C_{\pi}\pi_k\lambda_k}\int_{t_k}^{t_{k+1}}e^{-\frac{s-t_k}{\lambda_k}}\,ds\cdot
+  (\alpha_l-\alpha_{l+1})\Bigg[\beta_k+\frac{\lambda_k^2}{\alpha_k}\Big(e^{\frac{s-t_k}{\lambda_k}}-1\Big)\Bigg]\\
+  &=&\frac{\alpha_k(\alpha_l-\alpha_{l+1})}{C_{\pi}\pi_k\lambda_k}\int_{t_k}^{t_{k+1}}e^{-\frac{s-t_k}{\lambda_k}}\,ds\cdot
+  \Bigg[\Big(\beta_k-\frac{\lambda_k}{\alpha_k}\Big)+\frac{\lambda_k}{\alpha_k}e^{\frac{s-t_k}{\lambda_k}}\Bigg]\\
+  &=&\frac{\alpha_l-\alpha_{l+1}}{C_{\pi}\pi_k}
+  \Bigg[(\alpha_k-\alpha_{k+1})\Big(\beta_k-\frac{\lambda_k}{\alpha_k}\Big)+(t_{k+1}-t_k)\Bigg]
+\end{eqnarray*}
+
+$l=k$:
+\begin{eqnarray*}
+  q_{kl}&=&\frac{\alpha_k}{C_{\pi}\pi_k\lambda_k}\int_{t_k}^{t_{k+1}}e^{-\frac{s-t_k}{\lambda_k}}\,ds\cdot
+  \Bigg[\beta_k(\alpha_k-\alpha_{k+1})+(s-t_k)-\frac{\lambda_k\alpha_{k+1}}{\alpha_k}
+  \Big(e^{\frac{s-t_k}{\lambda_k}}-1\Big)\Bigg]\\
+  &=&\frac{\alpha_k}{C_{\pi}\pi_k}\int_0^{\tau_k}e^{-u}\,du\cdot
+  \Bigg[\beta_k(\alpha_k-\alpha_{k+1})+\frac{\lambda_k\alpha_{k+1}}{\alpha_k}
+	+\lambda_ku-\frac{\lambda_k\alpha_{k+1}}{\alpha_k}e^u\Bigg]\\
+  &=&\frac{1}{C_{\pi}\pi_k}\Bigg[\beta_k(\alpha_k-\alpha_{k+1})^2
+  +\frac{\lambda_k}{\alpha_k}(\alpha_k-\alpha_{k+1})(\alpha_k+\alpha_{k+1})-2\tau_k\alpha_{k+1}\Bigg]\\
+  &=&\frac{1}{C_{\pi}\pi_k}\Bigg[(\alpha_k-\alpha_{k+1})^2\Big(\beta_k-\frac{\lambda_k}{\alpha_k}\Big)
+  +2\lambda_k(\alpha_k-\alpha_{k+1})-2\alpha_{k+1}(t_{k+1}-t_k)\Bigg]
+\end{eqnarray*}
+
+\begin{eqnarray*}
+  p_{kl}&=&\frac{1}{\sigma_k}\int_{t_k}^{t_{k+1}}ds\int_{t_l}^{t_{l+1}}p(t|s)\sigma(s)\,dt\\
+  &=&\frac{1}{\sigma_k}\int_{t_k}^{t_{k+1}}\frac{\pi(s)\,ds}{C_{\sigma}(1-e^{-\rho s})}
+  \Bigg[\int_{t_l}^{t_{l+1}}(1-e^{-\rho s})q(t|s)\,dt+\delta_{kl}e^{-\rho s}\Bigg]\\
+  &=&\frac{1}{C_{\sigma}\sigma_k}\int_{t_k}^{t_{k+1}}\pi(s)\,ds\int_{t_l}^{t_{l+1}}q(t|s)\,dt
+  +\frac{\delta_{kl}}{C_{\sigma}\sigma_k}\int_{t_k}^{t_{k+1}}\Big(\frac{1}{1-e^{-\rho s}}-1\Big)\pi(s)\,ds\\
+  &=&\frac{\pi_kq_{kl}}{C_{\sigma}\sigma_k}+\frac{\delta_{kl}}{C_{\sigma}\sigma_k}
+  \Bigg[\int_{t_k}^{t_{k+1}}\frac{\pi(s)\,ds}{1-e^{-\rho s}}-\pi_k\Bigg]\\
+  &=&\frac{\pi_k q_{kl}}{C_{\sigma}\sigma_k}+\delta_{kl}\Big(1-\frac{\pi_k}{C_{\sigma}\sigma_k}\Big)
+\end{eqnarray*}
+
+\end{proof}
+
+\bibliography{psmc}
+
+\end{document}

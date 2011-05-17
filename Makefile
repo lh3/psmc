@@ -15,9 +15,12 @@ all:$(PROG)
 psmc:$(OBJS) main.o
 		$(CC) $(CCFLAGS) $(DFLAGS) $(OBJS) main.o -o $@ $(LIBS)
 
+psmc.pdf:psmc.tex
+		pdflatex psmc; bibtex psmc; pdflatex psmc; pdflatex psmc
+
 khmm.o:khmm.h
 kmin.o:kmin.h
 cli.o core.o aux.o em.o:psmc.h khmm.h
 
 clean:
-		rm -f *.o a.out *~ *.a $(PROG)
+		rm -f *.o a.out *~ *.a $(PROG) psmc*.aux psmc*.out psmc*.idx psmc*.log psmc*.pdf psmc*.bbl psmc*.blg
