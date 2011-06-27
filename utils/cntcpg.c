@@ -45,7 +45,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (argc == optind) {
-		fprintf(stderr, "Usage: cntcpg [-b] [-s 100] [-n 0.9] <in.fa>\n");
+		fprintf(stderr, "Usage: cntcpg [-b] [-s 100] [-n 0.9] <in.fa>\n\n");
+		fprintf(stderr, "Output: 5 numbers: #CpG #CpG-ts #nonCpG #nonCpG-ts+tv #tv\n");
 		return 1;
 	}
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
