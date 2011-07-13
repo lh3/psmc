@@ -47,7 +47,7 @@ static void usage(psmc_par_t *p)
 	fprintf(stderr, "         -o FILE     output file [stdout]\n");
 	fprintf(stderr, "         -i FILE     input parameter file [null]\n");
 //	fprintf(stderr, "         -I FLOAT    amplitude of random initialization for EM iteration [%lg]\n", p->ran_init);
-	fprintf(stderr, "         -T          estiamte divergence time\n");
+	fprintf(stderr, "         -T FLOAT    initial divergence time; -1 to disable [-1]\n");
 	fprintf(stderr, "         -b          bootstrap (input be preprocessed with split_psmcfa)\n");
 	fprintf(stderr, "         -S          simulate sequence\n");
 	fprintf(stderr, "         -d          perform decoding\n");
@@ -146,6 +146,7 @@ psmc_par_t *psmc_new_par()
 	par->max_t = 7.0;
 	par->tr_ratio = 4.0;
 	par->alpha = 0.1;
+	par->dt0 = -1.0;
 	return par;
 }
 
@@ -170,12 +171,12 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 	int c, is_bootstrap = 0;
 	psmc_par_t *par;
 	par = psmc_new_par();
-	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT")) >= 0) {
+	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT:")) >= 0) {
 		switch (c) {
 		case 'S': par->flag |= PSMC_F_SIMU; break;
 		case 'd': par->flag |= PSMC_F_DECODE; break;
 		case 'D': par->flag |= PSMC_F_FULLDEC; break;
-		case 'T': par->flag |= PSMC_F_DIVERG; break;
+		case 'T': par->dt0 = atof(optarg); if (par->dt0 >= 0) par->flag |= PSMC_F_DIVERG; break;
 		case 't': par->max_t = atof(optarg); break;
 		case 'l': par->alpha = atof(optarg); break;
 		case 'r': par->tr_ratio = atof(optarg); break;

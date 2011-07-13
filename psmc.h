@@ -46,6 +46,7 @@ typedef struct
 	FLOAT tr_ratio; // theta/rho ratio
 	FLOAT alpha;
 	FLOAT ran_init;
+	FLOAT dt0;
 } psmc_par_t;
 
 typedef struct

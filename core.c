@@ -35,6 +35,7 @@ psmc_data_t *psmc_new_data(psmc_par_t *pp)
 			pd->params[k] = 1.0 + (drand48() * 2.0 - 1.0) * pp->ran_init;
 			if (pd->params[k] < 0.1) pd->params[k] = 0.1;
 		}
+		if (pp->flag & PSMC_F_DIVERG) pd->params[pd->n_params - 1] = pp->dt0;
 	}
 	psmc_update_hmm(pp, pd);
 	return pd;
