@@ -47,6 +47,7 @@ static void usage(psmc_par_t *p)
 	fprintf(stderr, "         -o FILE     output file [stdout]\n");
 	fprintf(stderr, "         -i FILE     input parameter file [null]\n");
 //	fprintf(stderr, "         -I FLOAT    amplitude of random initialization for EM iteration [%lg]\n", p->ran_init);
+	fprintf(stderr, "         -T          estiamte divergence time\n");
 	fprintf(stderr, "         -b          bootstrap (input be preprocessed with split_psmcfa)\n");
 	fprintf(stderr, "         -S          simulate sequence\n");
 	fprintf(stderr, "         -d          perform decoding\n");
