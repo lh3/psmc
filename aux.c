@@ -61,7 +61,11 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	for (k = 0, sum = 0.0; k <= pp->n; ++k)
 		sum += pd->sigma[k] * log(pd->sigma[k] / pd->post_sigma[k]);
 	fprintf(pp->fpout, "RI\t%.10lf\n", sum);
+	// print other parameters
 	fprintf(pp->fpout, "TR\t%lf\t%lf\n", pd->params[0], pd->params[1]);
+	if (pp->flag & PSMC_F_DIVERG)
+		fprintf(pp->fpout, "DT\t%lf\n", pd->params[pd->n_params - 1]);
+	//
 	fprintf(pp->fpout, "MM\tC_pi: %lf, n_recomb: %lf\n", pd->C_pi, n_recomb);
 	for (k = 0; k <= pp->n; ++k)
 		fprintf(pp->fpout, "RS\t%d\t%lf\t%lf\t%lf\t%lf\t%lf\n", k, pd->t[k], lambda[k], n_recomb * pd->hp->a0[k],
@@ -75,7 +79,7 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	fflush(pp->fpout);
 	free(lambda);
 }
-void psmc_read_param(psmc_par_t *pp)
+void psmc_read_param(psmc_par_t *pp) // FIXME: not working for the divergence model
 {
 	FILE *fp;
 	char str[256];
@@ -90,7 +94,7 @@ void psmc_read_param(psmc_par_t *pp)
 	pp->par_map = psmc_parse_pattern(pp->pattern, &pp->n_free, &pp->n);
 	/* initialize inp_pa and inp_ti */
 	pp->inp_ti = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 2));
-	pp->inp_pa = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n_free + 2));
+	pp->inp_pa = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n_free + 3));
 	for (k = 0; k != pp->n_free + 2; ++k)
 		fscanf(fp, "%lf", pp->inp_pa + k);
 	pp->inp_ti[0] = 0.0;

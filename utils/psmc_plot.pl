@@ -32,7 +32,7 @@ Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
 \n") if (@ARGV < 2);
 
 my $prefix = shift(@ARGV);
-my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha);
+my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt);
 
 # initialize modifiers
 if ($opts{M}) {
@@ -59,7 +59,7 @@ while (<>) {
 	$d = \%{$data[$id++]};
 	$min_ri = 1e30; # reset
   } elsif (/^RD\s(\S+)/) {
-	$Mseg = $Msize = 0;
+	$Mseg = $Msize = $dt = 0;
 	$round = $1;
   } elsif (/^(RI|GF)\s(\S+)/ && $1 eq $gof && $2 !~ /nan|inf/) {
 	$do_store = 0;
@@ -77,10 +77,12 @@ while (<>) {
 	$N0 /= $alpha[$id-1] if (defined $alpha[$id-1]);
 	$d->{N0} = $N0;
 	$d->{RI} = $min_ri;
+  } elsif ($do_store && /^DT\s(\S+)/) {
+  	$dt = $1;
   } elsif ($do_store && /^RS\s(\d+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)/) { # psmc-0.6.0-5 or above
 	my $s = (defined $nscale[$id-1])? $nscale[$id-1] : 1.0;
 	my $t = (defined $tscale[$id-1])? $tscale[$id-1] : 0.0;
-	@{$d->{D}[$1]} = (2 * $N0 * $2 * (1.0-$t) * $opts{g}, $3 * $N0 * $s / 10000, $4, $5, $6);
+	@{$d->{D}[$1]} = (2 * $N0 * ($2 + $dt) * (1.0-$t) * $opts{g}, $3 * $N0 * $s / 10000, $4, $5, $6);
 	$Mseg = $4 if ($Mseg < $4);
 	$Msize = 2 * $N0 * $2 if ($Msize < $2 * $N0);
   } elsif ($do_store && /^PA\s(.*)/) {

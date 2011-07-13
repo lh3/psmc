@@ -10,7 +10,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 #define DEFAULT_PATTERN "4+5*3+4"
-#define PSMC_VERSION "0.7.0pre-1"
+#define PSMC_VERSION "0.6.3-dev (r23)"
 
 static char conv_table[256] = {
 	 2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,

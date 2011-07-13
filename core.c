@@ -8,7 +8,7 @@ psmc_data_t *psmc_new_data(psmc_par_t *pp)
 	psmc_data_t *pd;
 	int k, n = pp->n;
 	pd = (psmc_data_t*)calloc(1, sizeof(psmc_data_t));
-	pd->n_params = pp->n_free + 2;
+	pd->n_params = pp->n_free + ((pp->flag & PSMC_F_DIVERG)? 3 : 2); // one addition parameter for the divergence model
 	pd->hp = hmm_new_par(2, n + 1);
 	// initialize
 	pd->sigma = (FLOAT*)calloc(n+1, sizeof(FLOAT));
@@ -18,7 +18,7 @@ psmc_data_t *psmc_new_data(psmc_par_t *pp)
 	// initialize t[] and params[]
 	if (pp->inp_ti && pp->inp_pa) { // pameters are loaded from a file
 		memcpy(pd->t, pp->inp_ti, sizeof(FLOAT) * (n + 2));
-		memcpy(pd->params, pp->inp_pa, sizeof(FLOAT) * pd->n_params);
+		memcpy(pd->params, pp->inp_pa, sizeof(FLOAT) * pd->n_params); // FIXME: not working for the divergence model
 	} else {
 		FLOAT beta, theta;
 		// initialize psmc_data_t::t[]
@@ -49,7 +49,7 @@ void psmc_delete_data(psmc_data_t *pd)
 }
 void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{kl} and e_k(b)
 {
-	FLOAT *q, tmp, sum_t, *alpha, *beta, *q_aux, *lambda, theta, rho, *t, *tau;
+	FLOAT *q, tmp, sum_t, *alpha, *beta, *q_aux, *lambda, theta, rho, *t, *tau, dt = 0;
 	hmm_par_t *hp = pd->hp;
 	int k, l, n = pp->n;
 	t = pd->t;
@@ -59,10 +59,15 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 	q_aux = (FLOAT*)malloc(sizeof(FLOAT) * n); // for acceleration
 	q = (FLOAT*)malloc(sizeof(FLOAT) * (n + 1)); // q_{kl}
 	tau = (FLOAT*)malloc(sizeof(FLOAT) * (n + 1)); // \tau_k
-	// calculate population ppameters: \theta_0, \rho_0 and \lambda_k
+	// calculate population parameters: \theta_0, \rho_0 and \lambda_k
 	theta = pd->params[0]; rho = pd->params[1];
 	for (k = 0; k <= n; ++k)
 		lambda[k] = pd->params[pp->par_map[k] + 2];
+	// set the divergence time parameter if necessary
+	if (pp->flag & PSMC_F_DIVERG) {
+		dt = pd->params[pd->n_params - 1];
+		if (dt < 0) dt = 0;
+	}
 	// calculate \tau_k
 	for (k = 0; k <= n; ++k) tau[k] = t[k+1] - t[k];
 	// calculate \alpha
@@ -104,7 +109,7 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 		for (aa = hp->a[k], l = 0; l <= n; ++l) aa[l] = tmp * q[l];
 		aa[k] = tmp * q[k] + (1.0 - tmp);
 		hp->a0[k] = pd->sigma[k];
-		hp->e[0][k] = exp(-theta * avg_t);
+		hp->e[0][k] = exp(-theta * (avg_t + dt));
 		hp->e[1][k] = 1.0 - hp->e[0][k];
 		// update sum_lt
 		sum_t += tau[k];
