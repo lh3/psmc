@@ -169,9 +169,12 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 	int c, is_bootstrap = 0;
 	psmc_par_t *par;
 	par = psmc_new_par();
-	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSD")) >= 0) {
+	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT")) >= 0) {
 		switch (c) {
-		case 'S': par->is_simu = 1; break;
+		case 'S': par->flag |= PSMC_F_SIMU; break;
+		case 'd': par->flag |= PSMC_F_DECODE; break;
+		case 'D': par->flag |= PSMC_F_FULLDEC; break;
+		case 'T': par->flag |= PSMC_F_DIVERG; break;
 		case 't': par->max_t = atof(optarg); break;
 		case 'l': par->alpha = atof(optarg); break;
 		case 'r': par->tr_ratio = atof(optarg); break;
@@ -180,14 +183,12 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 		case 'o': par->fpout = fopen(optarg, "w"); assert(par->fpout); break;
 		case 'c': par->fpcnt = fopen(optarg, "rb"); assert(par->fpcnt); break;
 		case 'p': par->pattern = strdup(optarg); break;
-		case 'd': par->is_decoding = 1; break;
 		case 'I': par->ran_init = atof(optarg); break;
 		case 'b': is_bootstrap = 1; break;
-		case 'D': par->is_fulldec = 1; break;
 		default:  usage(par);
 		}
 	}
-	if (par->is_fulldec) par->is_decoding = 1;
+	if (par->flag & PSMC_F_FULLDEC) par->flag |= PSMC_F_DECODE;
 	if (optind == argc) usage(par);
 	fprintf(par->fpout, "CC\n");
 	fprintf(par->fpout, "CC\tBrief Description of the file format:\n");
@@ -210,7 +211,7 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 	fprintf(par->fpout, "MM\tpattern:%s, n:%d, n_free_lambdas:%d\n", par->pattern, par->n, par->n_free);
 	fprintf(par->fpout, "MM\tn_iterations:%d, skip:1, max_t:%g, theta/rho:%g\n",
 			par->n_iters, par->max_t, par->tr_ratio);
-	fprintf(par->fpout, "MM\tis_decoding:%d\n", par->is_decoding);
+	fprintf(par->fpout, "MM\tis_decoding:%d\n", (par->flag&PSMC_F_DECODE)? 1 : 0);
 	psmc_read_seq(argv[optind], par);
 	if (is_bootstrap) psmc_resamp(par); // resampling if required
 	fprintf(par->fpout, "MM\tn_seqs:%d, sum_L:%lld, sum_n:%d\n", par->n_seqs, (long long)par->sum_L, par->sum_n);

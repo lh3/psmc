@@ -114,7 +114,7 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 	t = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 1));
 	for (k = 0; k <= pp->n; ++k) {
 		t[k] = (pd->t[k] + 1.0 - (pd->t[k+1] - pd->t[k]) / (exp(pd->t[k+1]) / exp(pd->t[k]) - 1.0)) / pd->C_pi;
-		if (pp->is_fulldec) fprintf(pp->fpout, "TC\t%d\t%lf\t%lf\t%lf\n", k, t[k], pd->t[k], pd->t[k+1]);
+		if (pp->flag & PSMC_F_FULLDEC) fprintf(pp->fpout, "TC\t%d\t%lf\t%lf\t%lf\n", k, t[k], pd->t[k], pd->t[k+1]);
 	}
 	t2 = (FLOAT*)malloc(sizeof(FLOAT) * pp->n_free);
 	t_min = (FLOAT*)malloc(sizeof(FLOAT) * pp->n_free);
@@ -140,7 +140,7 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 		hd = hmm_new_data(s->L, seq, hp);
 		hmm_forward(hp, hd);
 		hmm_backward(hp, hd);
-		if (!pp->is_fulldec && pp->is_decoding) { // posterior decoding
+		if (!(pp->flag & PSMC_F_FULLDEC) && (pp->flag & PSMC_F_DECODE)) { // posterior decoding
 			int *x, kl;
 			hmm_post_decode(hp, hd);
 			/* show path */
@@ -163,7 +163,7 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%.5f\t%.5f\t%.5f\n", s->name, start, k-1, kl,
 					t_min[kl], t2[kl], kl == pp->n_free-1? pp->max_t * 2. : t_min[kl+1]);
 			fflush(pp->fpout);
-		} else if (pp->is_decoding) { // full decoding
+		} else if (pp->flag & PSMC_F_DECODE) { // full decoding
 			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
 			for (k = 1; k <= s->L; ++k) {
 				int l;

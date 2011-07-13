@@ -11,6 +11,11 @@
 
 #define PSMC_T_INF 1000.0
 
+#define PSMC_F_DECODE   0x1
+#define PSMC_F_FULLDEC  0x2
+#define PSMC_F_SIMU     0x4
+#define PSMC_F_DIVERG   0x8
+
 typedef struct
 {
 	int L, L_e, n_e;
@@ -33,8 +38,7 @@ typedef struct
 	FLOAT *inp_ti; // time intervals from the input
 	FLOAT *inp_pa; // parameters from the input
 
-	int is_decoding, is_fulldec;
-	int is_simu;
+	int flag;
 	int n_iters; // number of iterations
 	char *pre_fn; // previous results
 	char *pattern; // pattern
