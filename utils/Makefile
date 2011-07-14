@@ -2,7 +2,7 @@ CC=			gcc
 CFLAGS=		-g -Wall -O2
 DFLAGS=		
 OBJS=		
-PROG=		cntcpg fq2psmcfa
+PROG=		cntcpg fq2psmcfa splitfa
 LIBS=		-lm -lz
 
 .SUFFIXES:.c .o
@@ -14,6 +14,9 @@ all:$(PROG)
 
 fq2psmcfa:fq2psmcfa.o
 		$(CC) fq2psmcfa.o -o $@ $(LIBS)
+
+splitfa:splitfa.o
+		$(CC) splitfa.o -o $@ $(LIBS)
 
 cntcpg:cntcpg.o
 		$(CC) cntcpg.o -o $@ $(LIBS)
