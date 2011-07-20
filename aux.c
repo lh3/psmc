@@ -97,6 +97,7 @@ void psmc_read_param(psmc_par_t *pp) // FIXME: not working for the divergence mo
 	pp->inp_pa = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n_free + 3));
 	for (k = 0; k != pp->n_free + 2; ++k)
 		fscanf(fp, "%lf", pp->inp_pa + k);
+	if (pp->dt0 > 0.) fscanf(fp, "%lf", pp->inp_pa + k);
 	pp->inp_ti[0] = 0.0;
 	for (k = 1; k <= pp->n; ++k)
 		fscanf(fp, "%lf", pp->inp_ti + k);
