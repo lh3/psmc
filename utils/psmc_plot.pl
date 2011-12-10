@@ -32,16 +32,17 @@ Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
 \n") if (@ARGV < 2);
 
 my $prefix = shift(@ARGV);
-my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt);
+my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt, @xshift);
 
 # initialize modifiers
 if ($opts{M}) {
   my @t = split(/[,;]+/, $opts{M});
   for my $x (@t) {
-	push(@FN, ($x =~ /=([^\s=*:@]+)/)? $1 : 0.0);
-	push(@nscale, ($x =~ /\*([^\s=*:@]+)/? $1 : 1.0));
-	push(@tscale, ($x =~ /:([^\s=*:@]+)/? $1 : 0.0));
-	push(@alpha, ($x =~ /\@([^\s=*:@]+)/? $1 : 1.0));
+	push(@FN, ($x =~ /=([^\s=*:@>]+)/)? $1 : 0.0);
+	push(@nscale, ($x =~ /\*([^\s=*:@>]+)/? $1 : 1.0));
+	push(@tscale, ($x =~ /:([^\s=*:@>]+)/? $1 : 0.0));
+	push(@alpha, ($x =~ /\@([^\s=*:@>]+)/? $1 : 1.0));
+	push(@xshift, ($x =~ />([^\s=*:@>]+)/? $1 : 0.0));
   }
   for (0 .. $#alpha) {
 	$alpha[$_] = 2 * (2 + $alpha[$_]) / 3.0 / (1 + $alpha[$_]);
@@ -82,7 +83,8 @@ while (<>) {
   } elsif ($do_store && /^RS\s(\d+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)/) { # psmc-0.6.0-5 or above
 	my $s = (defined $nscale[$id-1])? $nscale[$id-1] : 1.0;
 	my $t = (defined $tscale[$id-1])? $tscale[$id-1] : 0.0;
-	@{$d->{D}[$1]} = (2 * $N0 * ($2 + $dt) * (1.0-$t) * $opts{g}, $3 * $N0 * $s / 10000, $4, $5, $6);
+	my $x = (defined $xshift[$id-1])? $xshift[$id-1] : 0.0;
+	@{$d->{D}[$1]} = (2 * $N0 * ($2 + $dt) * (1.0-$t) * $opts{g} + $x, $3 * $N0 * $s / 10000, $4, $5, $6);
 	$Mseg = $4 if ($Mseg < $4);
 	$Msize = 2 * $N0 * $2 if ($Msize < $2 * $N0);
   } elsif ($do_store && /^PA\s(.*)/) {
