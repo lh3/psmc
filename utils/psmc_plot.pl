@@ -51,11 +51,18 @@ if ($opts{M}) {
 
 # load data
 
+my $max_intv = 10000;
 $id = $do_store = 0;
 $gof = 'RI';
 while (<>) {
   if (/^MM.*skip:(\d+)/) {
 	$skip = $1 * $opts{s};
+  } elsif (/^MM.*pattern:(\S+),/) {
+  	my ($n_lambda, @pat) = &parse_pattern($1);
+	for ($_ = $#pat - 1; $_ >= 0; --$_) {
+		last if ($pat[$_] != $pat[$#pat]);
+	}
+	$max_intv = $_;
   } elsif (/^MM.*is_decoding:/) {
 	$d = \%{$data[$id++]};
 	$min_ri = 1e30; # reset
@@ -81,6 +88,7 @@ while (<>) {
   } elsif ($do_store && /^DT\s(\S+)/) {
   	$dt = $1;
   } elsif ($do_store && /^RS\s(\d+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)/) { # psmc-0.6.0-5 or above
+  	next if $1 > $max_intv;
 	my $s = (defined $nscale[$id-1])? $nscale[$id-1] : 1.0;
 	my $t = (defined $tscale[$id-1])? $tscale[$id-1] : 0.0;
 	my $x = (defined $xshift[$id-1])? $xshift[$id-1] : 0.0;
@@ -212,4 +220,23 @@ if (defined $opts{p}) {
 
 unless (defined($opts{R})) {
   unlink <$prefix.*.txt>; unlink "$prefix.gp";
+}
+
+sub parse_pattern {
+  $_ = shift;
+  s/\s+//g;
+  @_ = split('\+');
+  my $n_lambda = 0;
+  my @stack;
+  for (@_) {
+	my ($x1, $x2) = (1, $_);
+	$x1 = $1, $x2 = $2 if (/(\d+)\*(\d+)/);
+	push(@stack, $x2) for (0 .. $x1-1);
+	$n_lambda += $x1;
+  }
+  my @ret;
+  for my $i (0 .. $#stack) {
+	push(@ret, $i) for (0 .. $stack[$i]-1);
+  }
+  return ($n_lambda, @ret);
 }
