@@ -115,8 +115,8 @@ foreach my $i (0 .. @data-1) {
   $t1 += $t; $t2 += $t * $t;
   $s1 += $d->{RI}; $s2 += $d->{RI} * $d->{RI};
 }
-$t1 /= @data; $t2 = sqrt(($t2 - @data * $t1 * $t1) / @data);
-$s1 /= @data; $s2 = sqrt(($s2 - @data * $s1 * $s1) / @data);
+#$t1 /= @data; $t2 = sqrt(($t2 - @data * $t1 * $t1) / @data);
+#$s1 /= @data; $s2 = sqrt(($s2 - @data * $s1 * $s1) / @data);
 @misc[2..5] = ($t1, $s1, $t2, $s2);
 # @misc = (tr, ri, avg_tr, avg_ri, dev_tr, dev_ri)
 
@@ -154,8 +154,8 @@ my $y2tic = int($max_seg / 11.0 / 100.0 + 0.5) * 100;
 my $y2ran = $max_seg * 11.0 / 10.0;
 my $yran = ($opts{Y} > 0)? $opts{Y}/10000 : '*';
 my $xran = ($opts{X} > 0)? $opts{X} : '*';
-my $title_str = sprintf('{/Symbol q} / {/Symbol r} = %.2f (%.2f +/- %.2f), D_{KL} = %.2e (%.2e +/- %.2e)',
-					$misc[0], $misc[2], $misc[4], $misc[1], $misc[3], $misc[5]);
+#my $title_str = sprintf('{/Symbol q} / {/Symbol r} = %.2f (%.2f +/- %.2f), D_{KL} = %.2e (%.2e +/- %.2e)',
+#					$misc[0], $misc[2], $misc[4], $misc[1], $misc[3], $misc[5]);
 my $keyconf = $opts{M}? "set key $opts{P}" : "set key off";
 my $grid = $opts{G}? "set grid" : 'unset grid';
 my $afont = qq/font "$opts{f}"/;
