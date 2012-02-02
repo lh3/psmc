@@ -10,7 +10,7 @@ my $version = "0.2.0";
 
 my %opts = (u=>2.5e-8, 's'=>100, Y=>0, m=>5, X=>0, M=>'', x=>10000, n=>20, g=>25, f=>"Helvetica,22",
 			w=>4, P=>"right top", T=>'');
-getopts('x:u:s:X:Y:RGpm:n:M:N:g:f:w:P:T:', \%opts);
+getopts('x:u:s:X:Y:RSGpm:n:M:N:g:f:w:P:T:', \%opts);
 die("
 Usage:   psmc_plot.pl [options] <out.prefix> <in.psmc>\n
 Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
@@ -26,12 +26,14 @@ Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
          -w INT     line width [$opts{w}]
          -P STR     position of the keys [$opts{P}]
          -T STR     figure title [null]
+		 -S         no scaling
          -p         convert to PDF (with epstopdf)
          -R         do not remove temporary files
          -G         plot grid
 \n") if (@ARGV < 2);
 
 my $prefix = shift(@ARGV);
+my $scaling = defined($opts{S})? 0 : 1;
 my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt, @xshift);
 
 # initialize modifiers
@@ -92,7 +94,11 @@ while (<>) {
 	my $s = (defined $nscale[$id-1])? $nscale[$id-1] : 1.0;
 	my $t = (defined $tscale[$id-1])? $tscale[$id-1] : 0.0;
 	my $x = (defined $xshift[$id-1])? $xshift[$id-1] : 0.0;
-	@{$d->{D}[$1]} = (2 * $N0 * ($2 + $dt) * (1.0-$t) * $opts{g} + $x, $3 * $N0 * $s / 10000, $4, $5, $6);
+	if ($scaling) {
+		@{$d->{D}[$1]} = (2 * $N0 * ($2 + $dt) * (1.0-$t) * $opts{g} + $x, $3 * $N0 * $s / 10000, $4, $5, $6);
+	} else {
+		@{$d->{D}[$1]} = ($d->{T} * ($2 + $dt) * (1.0-$t) + $x, $3 * $d->{T} * $s * 1000, $4, $5, $6);
+	}
 	$Mseg = $4 if ($Mseg < $4);
 	$Msize = 2 * $N0 * $2 if ($Msize < $2 * $N0);
   } elsif ($do_store && /^PA\s(.*)/) {
@@ -149,10 +155,7 @@ if ($opts{M}) {
 }
 
 # plot
-
-my $y2tic = int($max_seg / 11.0 / 100.0 + 0.5) * 100;
-my $y2ran = $max_seg * 11.0 / 10.0;
-my $yran = ($opts{Y} > 0)? $opts{Y}/10000 : '*';
+my $yran = ($opts{Y} > 0)? $opts{Y} : '*';
 my $xran = ($opts{X} > 0)? $opts{X} : '*';
 #my $title_str = sprintf('{/Symbol q} / {/Symbol r} = %.2f (%.2f +/- %.2f), D_{KL} = %.2e (%.2e +/- %.2e)',
 #					$misc[0], $misc[2], $misc[4], $misc[1], $misc[3], $misc[5]);
@@ -161,6 +164,15 @@ my $grid = $opts{G}? "set grid" : 'unset grid';
 my $afont = qq/font "$opts{f}"/;
 my $lw = qq/lw $opts{w}/;
 my $ylab_aux = sprintf("%.1fx10^{-8}", $opts{u}/1e-8);
+
+my ($xlab, $ylab);
+if ($scaling) {
+	$xlab = "Years (g=$opts{g}, {/Symbol m}=$ylab_aux)";
+	$ylab = "Effective population size (x10^4)";
+} else {
+	$xlab = q[Per-site sequence divergence (2{/Symbol m}T)];
+	$ylab = q[Scaled mutation rate (4{/Symbol m}N x 10^3)];
+}
 
 open($fh, "| tee $prefix.gp | gnuplot") || die;
 print $fh qq(
@@ -174,15 +186,14 @@ print $fh qq(
   $keyconf;
   set xtics $afont;
   set ytics nomirror $afont;
-  set xlab "Years (g=$opts{g}, {/Symbol m}=$ylab_aux)" $afont;
+  set xlab "$xlab" $afont;
   set t po eps enhance so co "Helvetica,20";
 );
 #print $fh qq(set title "$title_str";); # the title line
 print $fh qq/set title "$opts{T}";/ if ($opts{T});
 print $fh qq(
   set yran [0:$yran];
-  set y2ran [0:$y2ran];
-  set ylab "Effective population size (x10^4)" $afont;
+  set ylab "$ylab" $afont;
   set out "$prefix.eps";
   set style line 1 lt 1 lc rgb "#FF0000" $lw;
   set style line 2 lt 1 lc rgb "#00C000" $lw;
@@ -192,7 +203,10 @@ print $fh qq(
   set style line 6 lt 1 lc rgb "#C04000" $lw;
   set style line 7 lt 1 lc rgb "#C8C800" $lw;
   set style line 8 lt 1 lc rgb "#FF80FF" $lw;
-  set style line 9 lt 1 lc rgb "#000000" $lw;
+  set style line 9 lt 1 lc rgb "#4E642E" $lw;
+  set style line 10 lt 1 lc rgb "#800000" $lw;
+  set style line 11 lt 1 lc rgb "#67B7F7" $lw;
+  set style line 12 lt 1 lc rgb "#FFC127" $lw;
   plot );
 if ($opts{M}) {
   my @titles = split(/[,;]/, $opts{M});
