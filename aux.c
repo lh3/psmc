@@ -54,7 +54,7 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	lambda = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 1));
 	theta0 = pd->params[0]; rho0 = pd->params[1];
 	for (k = 0; k <= pp->n; ++k)
-		lambda[k] = pd->params[pp->par_map[k] + 2];
+		lambda[k] = pd->params[pp->par_map[k] + PSMC_N_PARAMS];
 	fprintf(pp->fpout, "LK\t%lf\n", pd->lk);
 	fprintf(pp->fpout, "QD\t%lf -> %lf\n", pd->Q0, pd->Q1);
 	// calculate Relative Information (KL distnace)
@@ -63,6 +63,7 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	fprintf(pp->fpout, "RI\t%.10lf\n", sum);
 	// print other parameters
 	fprintf(pp->fpout, "TR\t%lf\t%lf\n", pd->params[0], pd->params[1]);
+	fprintf(pp->fpout, "MT\t%lf\n", pd->params[2]);
 	if (pp->flag & PSMC_F_DIVERG)
 		fprintf(pp->fpout, "DT\t%lf\n", pd->params[pd->n_params - 1]);
 	//
@@ -73,8 +74,6 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	fprintf(pp->fpout, "PA\t%s", pp->pattern);
 	for (k = 0; k != pd->n_params; ++k)
 		fprintf(pp->fpout, " %.9lf", pd->params[k]);
-	for (k = 1; k <= pp->n; ++k)
-		fprintf(pp->fpout, " %.9lf", pd->t[k]);
 	fprintf(pp->fpout, "\n//\n");
 	fflush(pp->fpout);
 	free(lambda);
@@ -93,17 +92,13 @@ void psmc_read_param(psmc_par_t *pp) // FIXME: not working for the divergence mo
 	if (pp->par_map) free(pp->par_map);
 	pp->par_map = psmc_parse_pattern(pp->pattern, &pp->n_free, &pp->n);
 	/* initialize inp_pa and inp_ti */
-	pp->inp_ti = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 2));
-	pp->inp_pa = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n_free + 3));
-	for (k = 0; k != pp->n_free + 2; ++k)
-		fscanf(fp, "%lf", pp->inp_pa + k);
-	if (pp->dt0 > 0.) fscanf(fp, "%lf", pp->inp_pa + k);
-	pp->inp_ti[0] = 0.0;
-	for (k = 1; k <= pp->n; ++k)
-		fscanf(fp, "%lf", pp->inp_ti + k);
-	pp->inp_ti[pp->n + 1] = PSMC_T_INF;
+	pp->inp_pa = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n_free + PSMC_N_PARAMS + 1));
+	for (k = 0; k != pp->n_free + PSMC_N_PARAMS; ++k)
+		fscanf(fp, "%lf", &pp->inp_pa[k]);
+	if (fscanf(fp, "%lf", &pp->inp_pa[k]) > 0)
+		pp->dt0 = pp->inp_pa[k], pp->flag |= PSMC_F_DIVERG;
 	/* for other stuff */
-	pp->max_t = pp->inp_ti[pp->n];
+	pp->max_t = pp->inp_pa[2];
 	pp->tr_ratio = pp->inp_pa[0] / pp->inp_pa[1];
 	fclose(fp);
 }

@@ -10,7 +10,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 #define DEFAULT_PATTERN "4+5*3+4"
-#define PSMC_VERSION "0.6.3-dev (r23)"
+#define PSMC_VERSION "0.6.4-r33"
 
 static char conv_table[256] = {
 	 2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,
@@ -143,7 +143,7 @@ psmc_par_t *psmc_new_par()
 	par = (psmc_par_t*)calloc(1, sizeof(psmc_par_t));
 	par->n_iters = 30;
 	par->fpout = stdout;
-	par->max_t = 7.0;
+	par->max_t = 15.0;
 	par->tr_ratio = 4.0;
 	par->alpha = 0.1;
 	par->dt0 = -1.0;
@@ -154,7 +154,7 @@ void psmc_delete_par(psmc_par_t *par)
 {
 	int i;
 	if (par == 0) return;
-	free(par->par_map); free(par->inp_ti); free(par->inp_pa);
+	free(par->par_map); free(par->inp_pa);
 	free(par->pre_fn); free(par->pattern);
 	fclose(par->fpout);
 	for (i = 0; i != par->n_seqs; ++i) {

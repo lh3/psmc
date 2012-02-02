@@ -3,12 +3,22 @@
 #include <string.h>
 #include "psmc.h"
 
+void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha)
+{
+	int k;
+	FLOAT beta;
+	beta = log(1.0 + max_t / alpha) / n; // beta controls the sizes of intervals
+	for (k = 0; k < n; ++k)
+		t[k] = alpha * (exp(beta * k) - 1);
+	t[n] = max_t; t[n+1] = PSMC_T_INF; // the infinity: exp(PSMC_T_INF) > 1e310 = inf
+}
+
 psmc_data_t *psmc_new_data(psmc_par_t *pp)
 {
 	psmc_data_t *pd;
 	int k, n = pp->n;
 	pd = (psmc_data_t*)calloc(1, sizeof(psmc_data_t));
-	pd->n_params = pp->n_free + ((pp->flag & PSMC_F_DIVERG)? 3 : 2); // one addition parameter for the divergence model
+	pd->n_params = pp->n_free + PSMC_N_PARAMS + ((pp->flag & PSMC_F_DIVERG)? 1 : 0); // one addition parameter for the divergence model
 	pd->hp = hmm_new_par(2, n + 1);
 	// initialize
 	pd->sigma = (FLOAT*)calloc(n+1, sizeof(FLOAT));
@@ -16,21 +26,16 @@ psmc_data_t *psmc_new_data(psmc_par_t *pp)
 	pd->t = (FLOAT*)malloc(sizeof(FLOAT) * (n + 2)); // $t_0,\ldots,t_{n+1}$
 	pd->params = (FLOAT*)calloc(pd->n_params, sizeof(FLOAT)); // free lambdas + theta + rho
 	// initialize t[] and params[]
-	if (pp->inp_ti && pp->inp_pa) { // pameters are loaded from a file
-		memcpy(pd->t, pp->inp_ti, sizeof(FLOAT) * (n + 2));
+	if (pp->inp_pa) { // pameters are loaded from a file
 		memcpy(pd->params, pp->inp_pa, sizeof(FLOAT) * pd->n_params); // FIXME: not working for the divergence model
 	} else {
-		FLOAT beta, theta;
-		// initialize psmc_data_t::t[]
-		beta = log(1.0 + pp->max_t / pp->alpha) / n; // beta controls the sizes of intervals
-		for (k = 0; k < n; ++k)
-			pd->t[k] = pp->alpha * (exp(beta * k) - 1);
-		pd->t[n] = pp->max_t; pd->t[n+1] = PSMC_T_INF; // the infinity: exp(PSMC_T_INF) > 1e310 = inf
+		FLOAT theta;
 		// initialize psmc_data_t::params[]
 		theta = -log(1.0 - (FLOAT)pp->sum_n / pp->sum_L);
 		pd->params[0] = theta; // \theta_0
 		pd->params[1] = theta / pp->tr_ratio; // \rho_0
-		for (k = 2; k != pp->n_free + 2; ++k) {
+		pd->params[2] = pp->max_t;
+		for (k = PSMC_N_PARAMS; k != pp->n_free + PSMC_N_PARAMS; ++k) {
 			// \lambda_k
 			pd->params[k] = 1.0 + (drand48() * 2.0 - 1.0) * pp->ran_init;
 			if (pd->params[k] < 0.1) pd->params[k] = 0.1;
@@ -50,7 +55,7 @@ void psmc_delete_data(psmc_data_t *pd)
 }
 void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{kl} and e_k(b)
 {
-	FLOAT *q, tmp, sum_t, *alpha, *beta, *q_aux, *lambda, theta, rho, *t, *tau, dt = 0;
+	FLOAT *q, tmp, sum_t, max_t, *alpha, *beta, *q_aux, *lambda, theta, rho, *t, *tau, dt = 0;
 	hmm_par_t *hp = pd->hp;
 	int k, l, n = pp->n;
 	t = pd->t;
@@ -60,10 +65,11 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 	q_aux = (FLOAT*)malloc(sizeof(FLOAT) * n); // for acceleration
 	q = (FLOAT*)malloc(sizeof(FLOAT) * (n + 1)); // q_{kl}
 	tau = (FLOAT*)malloc(sizeof(FLOAT) * (n + 1)); // \tau_k
-	// calculate population parameters: \theta_0, \rho_0 and \lambda_k
-	theta = pd->params[0]; rho = pd->params[1];
+	// calculate population parameters: \theta_0, \rho_0, \lambda_k and max_t
+	theta = pd->params[0]; rho = pd->params[1]; max_t = pd->params[2];
 	for (k = 0; k <= n; ++k)
-		lambda[k] = pd->params[pp->par_map[k] + 2];
+		lambda[k] = pd->params[pp->par_map[k] + PSMC_N_PARAMS];
+	psmc_update_intv(pp->n, pd->t, max_t, pp->alpha);
 	// set the divergence time parameter if necessary
 	if (pp->flag & PSMC_F_DIVERG) {
 		dt = pd->params[pd->n_params - 1];

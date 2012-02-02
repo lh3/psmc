@@ -9,6 +9,8 @@
 #define FLOAT double
 #endif
 
+#define PSMC_N_PARAMS 3
+
 #define PSMC_T_INF 1000.0
 
 #define PSMC_F_DECODE   0x1
@@ -35,7 +37,6 @@ typedef struct
 
 	FILE *fpout, *fpcnt;
 
-	FLOAT *inp_ti; // time intervals from the input
 	FLOAT *inp_pa; // parameters from the input
 
 	int flag;
@@ -89,8 +90,8 @@ extern "C" {
 	void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd);
 	// simulate sequences
 	void psmc_simulate(const psmc_par_t *pp, const psmc_data_t *pd);
-	// local GOF
-	void psmc_localgof(const psmc_par_t *pp, const psmc_data_t *pd);
+
+	void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha);
 
 #ifdef __cplusplus
 }
