@@ -36,7 +36,7 @@ static void usage(psmc_par_t *p)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Program: psmc (Pairwise SMC Model)\n");
 	fprintf(stderr, "Version: %s\n", PSMC_VERSION);
-	fprintf(stderr, "Contact: <http://lh3.userecho.com/>\n\n");
+	fprintf(stderr, "Contact: <http://hengli.uservoice.com/>\n\n");
 	fprintf(stderr, "Usage:   psmc [options] input.txt\n\n");
 	fprintf(stderr, "Options: -p STR      pattern of parameters [%s]\n", DEFAULT_PATTERN);
 	fprintf(stderr, "         -t FLOAT    maximum 2N0 coalescent time [%lg]\n", p->max_t);

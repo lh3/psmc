@@ -54,8 +54,8 @@ following command lines perform 100 rounds of bootstrapping:
 
 One probably wants to modify the "xargs" command-line to parallelize PSMC.
 
-If you have questions about PSMC, please ask at <http://lh3.userecho.com/>. You
-do not need to register unless you also want to modify your own questions. You
-may also post comments at github (if you have a github account). I want to make
-the question and the answer public such that others can see them and I do not
-need to answer the same question multiple times. Thank you for using PSMC.
+If you have questions about PSMC, please ask at <http://hengli.uservoice.com/>.
+You do not need to register unless you also want to modify your own questions.
+You may also post comments at github (if you have a github account). I want to
+make the question and the answer public such that others can see them and I do
+not need to answer the same question multiple times. Thank you for using PSMC.
