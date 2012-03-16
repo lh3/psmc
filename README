@@ -59,3 +59,38 @@ You do not need to register unless you also want to modify your own questions.
 You may also post comments at github (if you have a github account). I want to
 make the question and the answer public such that others can see them and I do
 not need to answer the same question multiple times. Thank you for using PSMC.
+
+
+APPENDIX I: Scaling the PSMC output
+===================================
+
+The PSMC output is scaled to the 2N_0. There are two ways of rescaling the time
+and the popuation size more meaningfully.
+
+Firstly, suppose we know the per-site per-generation mutation rate \mu, we can
+compute N_0 as:
+
+  N_0 = \theta_0 / (4\mu) / s
+
+where \theta_0 is given at the 2nd column of "TR" lines, and s is the bin size
+we use for generating the PSMC input. Knowing N_0, we can scale time to
+generations and relative population size to effective size by
+
+  T_k = 2N_0 * t_k
+  N_k = N_0 * \lambda_k
+
+where t_k and \lambda_k are given at the 3rd and 4th columns of "RS" lines,
+respectively.
+
+A problem with the above strategy is that we do not know a definite answer of
+\mu and in fact it various with regions and mutation types. An alternative way
+is to use per-site pairwise sequence divergence to represent time:
+
+  d_k = 2\mu * T_k = t_k * \theta_0 / s
+
+and use scaled mutation rate to represent population size:
+
+  \theta_k = 4N_k * \mu = \lambda_k * \theta_0 / s
+
+where, again, t_k and \lambda_k are given at the "RS" line, \theta_0 at the
+"TR" line and s is the bin size, which defaults to 100 in fq2psmcfa.
