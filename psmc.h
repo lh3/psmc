@@ -17,6 +17,9 @@
 #define PSMC_F_FULLDEC  0x2
 #define PSMC_F_SIMU     0x4
 #define PSMC_F_DIVERG   0x8
+#define PSMC_F_ADMIX    0x10
+
+#define PSMC_DEF_A11F   0.1
 
 typedef struct
 {
@@ -48,6 +51,8 @@ typedef struct
 	FLOAT alpha;
 	FLOAT ran_init;
 	FLOAT dt0;
+
+	FLOAT at0, a01, a11f;
 } psmc_par_t;
 
 typedef struct

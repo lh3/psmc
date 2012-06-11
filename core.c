@@ -16,10 +16,10 @@ void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha)
 psmc_data_t *psmc_new_data(psmc_par_t *pp)
 {
 	psmc_data_t *pd;
-	int k, n = pp->n;
+	int k, n = pp->n, parend;
 	pd = (psmc_data_t*)calloc(1, sizeof(psmc_data_t));
-	pd->n_params = pp->n_free + PSMC_N_PARAMS + ((pp->flag & PSMC_F_DIVERG)? 1 : 0); // one addition parameter for the divergence model
-	pd->hp = hmm_new_par(2, n + 1);
+	pd->n_params = pp->n_free + PSMC_N_PARAMS + ((pp->flag & PSMC_F_DIVERG)? 1 : 0) + ((pp->flag & PSMC_F_ADMIX)? 3 : 0); // one addition parameter for the divergence model
+	pd->hp = hmm_new_par(2, n + 1 + ((pp->flag & PSMC_F_ADMIX)? 1 : 0));
 	// initialize
 	pd->sigma = (FLOAT*)calloc(n+1, sizeof(FLOAT));
 	pd->post_sigma = (FLOAT*)calloc(n+1, sizeof(FLOAT));
@@ -40,7 +40,13 @@ psmc_data_t *psmc_new_data(psmc_par_t *pp)
 			pd->params[k] = 1.0 + (drand48() * 2.0 - 1.0) * pp->ran_init;
 			if (pd->params[k] < 0.1) pd->params[k] = 0.1;
 		}
-		if (pp->flag & PSMC_F_DIVERG) pd->params[pd->n_params - 1] = pp->dt0;
+		parend = pp->par_map[n] + PSMC_N_PARAMS + 1;
+		if (pp->flag & PSMC_F_DIVERG) pd->params[parend++] = pp->dt0;
+		if (pp->flag & PSMC_F_ADMIX) {
+			pd->params[parend++] = pp->at0;
+			pd->params[parend++] = pp->a01;
+			pd->params[parend++] = pp->a11f;
+		}
 	}
 	psmc_update_hmm(pp, pd);
 	return pd;
@@ -55,9 +61,9 @@ void psmc_delete_data(psmc_data_t *pd)
 }
 void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{kl} and e_k(b)
 {
-	FLOAT *q, tmp, sum_t, max_t, *alpha, *beta, *q_aux, *lambda, theta, rho, *t, *tau, dt = 0;
+	FLOAT *q, tmp, sum_t, max_t, *alpha, *beta, *q_aux, *lambda, theta, rho, *t, *tau, dt = 0, at = 0, a01 = 0, a11f = 0;
 	hmm_par_t *hp = pd->hp;
-	int k, l, n = pp->n;
+	int k, l, n = pp->n, parend;
 	t = pd->t;
 	lambda = (FLOAT*)malloc(sizeof(FLOAT) * (n + 1)); // \lambda_k
 	alpha = (FLOAT*)malloc(sizeof(FLOAT) * (n + 2)); // \alpha_k
@@ -70,10 +76,16 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 	for (k = 0; k <= n; ++k)
 		lambda[k] = pd->params[pp->par_map[k] + PSMC_N_PARAMS];
 	psmc_update_intv(pp->n, pd->t, max_t, pp->alpha);
+	parend = pp->par_map[n] + PSMC_N_PARAMS + 1;
 	// set the divergence time parameter if necessary
 	if (pp->flag & PSMC_F_DIVERG) {
-		dt = pd->params[pd->n_params - 1];
+		dt = pd->params[parend++];
 		if (dt < 0) dt = 0;
+	}
+	if (pp->flag & PSMC_F_ADMIX) {
+		at = pd->params[parend++];
+		a01 = pd->params[parend++];
+		a11f = pd->params[parend++];
 	}
 	// calculate \tau_k
 	for (k = 0; k <= n; ++k) tau[k] = t[k+1] - t[k];
@@ -113,8 +125,13 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 		}
 		// calculate p_{kl} and e_k(b)
 		tmp = pik / (pd->C_sigma * pd->sigma[k]);
-		for (aa = hp->a[k], l = 0; l <= n; ++l) aa[l] = tmp * q[l];
+		aa = hp->a[k];
+		for (l = 0; l <= n; ++l) aa[l] = tmp * q[l];
 		aa[k] = tmp * q[k] + (1.0 - tmp);
+		if (pp->flag & PSMC_F_ADMIX) {
+			for (l = 0; l <= n; ++l) aa[l] *= 1 - a01;
+			aa[n + 1] = a01;
+		}
 		hp->a0[k] = pd->sigma[k];
 		hp->e[0][k] = exp(-theta * (avg_t + dt));
 		hp->e[1][k] = 1.0 - hp->e[0][k];
@@ -123,6 +140,12 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 		// for (l = 0, tmp = 0.0; l <= n; ++l) tmp += q[l]; fprintf(stderr, "%d\t%lf\n", k, tmp); // for testing only
 	}
 	// for (l = 0, tmp = 0.0; l <= n; ++l) tmp += hp->a0[l]; fprintf(stderr, "%lf\n", tmp); // for testing only
+	if (pp->flag & PSMC_F_ADMIX) {
+		hp->a[n + 1][n + 1] = exp(-rho * (at + dt) * a11f);
+		for (k = 0; k <= n; ++k) hp->a[n+1][k] = pd->sigma[k] * (1 - hp->a[n + 1][n + 1]);
+		hp->e[0][n + 1] = exp(-theta * (at + dt));
+		hp->e[1][n + 1] = 1.0 - hp->e[0][n + 1];
+	}
 	// free
 	free(q); free(alpha); free(beta); free(q_aux); free(lambda); free(tau);
 }

@@ -147,6 +147,8 @@ psmc_par_t *psmc_new_par()
 	par->tr_ratio = 4.0;
 	par->alpha = 0.1;
 	par->dt0 = -1.0;
+	par->a11f = PSMC_DEF_A11F;
+	par->a01 = 0.01;
 	return par;
 }
 
@@ -171,8 +173,9 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 	int c, is_bootstrap = 0;
 	psmc_par_t *par;
 	par = psmc_new_par();
-	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT:")) >= 0) {
+	while ((c = getopt(argc, argv, "A:i:t:l:r:N:p:o:dI:c:bSDT:")) >= 0) {
 		switch (c) {
+		case 'A': par->flag |= PSMC_F_ADMIX; par->at0 = atof(optarg); break;
 		case 'S': par->flag |= PSMC_F_SIMU; break;
 		case 'd': par->flag |= PSMC_F_DECODE; break;
 		case 'D': par->flag |= PSMC_F_FULLDEC; break;

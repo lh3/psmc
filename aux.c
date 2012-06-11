@@ -48,7 +48,7 @@ void psmc_resamp(psmc_par_t *pp)
 
 void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 {
-	int k;
+	int k, parend;
 	FLOAT n_recomb = pp->sum_L / pd->C_sigma;
 	FLOAT theta0, rho0, *lambda, sum;
 	lambda = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 1));
@@ -64,8 +64,11 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	// print other parameters
 	fprintf(pp->fpout, "TR\t%lf\t%lf\n", pd->params[0], pd->params[1]);
 	fprintf(pp->fpout, "MT\t%lf\n", pd->params[2]);
+	parend = pp->par_map[pp->n] + PSMC_N_PARAMS + 1;
 	if (pp->flag & PSMC_F_DIVERG)
-		fprintf(pp->fpout, "DT\t%lf\n", pd->params[pd->n_params - 1]);
+		fprintf(pp->fpout, "DT\t%lf\n", pd->params[parend++]);
+	if (pp->flag & PSMC_F_ADMIX)
+		fprintf(pp->fpout, "AD\t%f\t%f\t%f\n", pd->params[parend], pd->params[parend + 1], pd->params[parend + 2]);
 	//
 	fprintf(pp->fpout, "MM\tC_pi: %lf, n_recomb: %lf\n", pd->C_pi, n_recomb);
 	for (k = 0; k <= pp->n; ++k)
