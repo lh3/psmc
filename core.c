@@ -141,6 +141,7 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 	}
 	// for (l = 0, tmp = 0.0; l <= n; ++l) tmp += hp->a0[l]; fprintf(stderr, "%lf\n", tmp); // for testing only
 	if (pp->flag & PSMC_F_ADMIX) {
+		hp->a0[n + 1] = 0.0;
 		hp->a[n + 1][n + 1] = exp(-rho * (at + dt) * a11f);
 		for (k = 0; k <= n; ++k) hp->a[n+1][k] = pd->sigma[k] * (1 - hp->a[n + 1][n + 1]);
 		hp->e[0][n + 1] = exp(-theta * (at + dt));
