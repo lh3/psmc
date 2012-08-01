@@ -219,7 +219,7 @@ if ($opts{M}) {
 	print $fh ", " if ($i != $#data);
   }
 } else {
-  foreach my $i (1 .. @data-1) { print $fh qq("$prefix.$i.txt" u 1:2 w st not 2, ); }
+  foreach my $i (1 .. @data-1) { print $fh qq("$prefix.$i.txt" u 1:2 w st not ls 2, ); }
   print $fh qq("$prefix.0.txt" u 1:2 t "popsize" w st ls 1);
   #print $fh qq(, "$prefix.0.txt" u 1:3 t "#segments" axis x1y2 w st 3);
   print $fh qq(;\n);
