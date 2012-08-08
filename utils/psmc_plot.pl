@@ -8,7 +8,7 @@ use Getopt::Std;
 
 my $version = "0.2.0";
 
-my %opts = (u=>2.5e-8, 's'=>100, Y=>0, m=>5, X=>0, M=>'', x=>10000, n=>20, g=>25, f=>"Helvetica,22",
+my %opts = (u=>2.5e-8, 's'=>100, Y=>0, m=>5, X=>0, M=>'', x=>10000, n=>20, g=>25, f=>"Helvetica,16",
 			w=>4, P=>"right top", T=>'');
 getopts('x:u:s:X:Y:RSGpm:n:M:N:g:f:w:P:T:', \%opts);
 die("
@@ -170,8 +170,8 @@ if ($scaling) {
 	$xlab = "Years (g=$opts{g}, {/Symbol m}=$ylab_aux)";
 	$ylab = "Effective population size (x10^4)";
 } else {
-	$xlab = q[Per-site sequence divergence (2{/Symbol m}T)];
-	$ylab = q[Scaled mutation rate (4{/Symbol m}N x 10^3)];
+	$xlab = q[Time (scaled in units of 2{/Symbol m}T)];
+	$ylab = q[Population size (scaled in units of 4{/Symbol m}N_e {/Symbol \264} 10^3)];
 }
 
 open($fh, "| tee $prefix.gp | gnuplot") || die;
@@ -187,7 +187,7 @@ print $fh qq(
   set xtics $afont;
   set ytics nomirror $afont;
   set xlab "$xlab" $afont;
-  set t po eps enhance so co "Helvetica,20";
+  set t po eps enhance so co "Helvetica,16";
 );
 #print $fh qq(set title "$title_str";); # the title line
 print $fh qq/set title "$opts{T}";/ if ($opts{T});
