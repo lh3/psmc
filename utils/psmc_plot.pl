@@ -34,7 +34,7 @@ Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
 
 my $prefix = shift(@ARGV);
 my $scaling = defined($opts{S})? 0 : 1;
-my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt, @xshift);
+my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt, @xshift, $N_scale);
 
 # initialize modifiers
 if ($opts{M}) {
@@ -82,9 +82,10 @@ while (<>) {
 	}
   } elsif ($do_store && /^TR\s(\S+)\s(\S+)/) {
 	($d->{T}, $d->{R}) = ($1/$skip, $2/$skip);
-	$N0 = $1/$skip / (4 * $opts{u});
-	$N0 /= 1.0 - $FN[$id-1] if (defined $FN[$id-1]);
-	$N0 /= $alpha[$id-1] if (defined $alpha[$id-1]);
+	$N_scale = 1.0;
+	$N_scale /= 1.0 - $FN[$id-1] if (defined $FN[$id-1]);
+	$N_scale /= $alpha[$id-1] if (defined $alpha[$id-1]);
+	$N0 = $1/$skip / (4 * $opts{u}) * $N_scale;
 	$d->{N0} = $N0;
 	$d->{RI} = $min_ri;
   } elsif ($do_store && /^DT\s(\S+)/) {
@@ -97,7 +98,7 @@ while (<>) {
 	if ($scaling) {
 		@{$d->{D}[$1]} = (2 * $N0 * ($2 + $dt) * (1.0-$t) * $opts{g} + $x, $3 * $N0 * $s / 10000, $4, $5, $6);
 	} else {
-		@{$d->{D}[$1]} = ($d->{T} * ($2 + $dt) * (1.0-$t) + $x, $3 * $d->{T} * $s * 1000, $4, $5, $6);
+		@{$d->{D}[$1]} = ($N_scale * $d->{T} * ($2 + $dt) * (1.0-$t) + $x, $N_scale * $3 * $d->{T} * $s * 1000, $4, $5, $6);
 	}
 	$Mseg = $4 if ($Mseg < $4);
 	$Msize = 2 * $N0 * $2 if ($Msize < $2 * $N0);

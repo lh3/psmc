@@ -5,7 +5,7 @@ use warnings;
 use Getopt::Std;
 
 my %opts = (d=>'ctime_plot', l=>10.0, h=>0.5, Y=>0, r=>'');
-getopts('d:l:h:Y:r:', \%opts);
+getopts('d:l:h:Y:r:L', \%opts);
 die(qq(
 Usage:   ctime_plot.pl [options] <in.ctime> [...]\n
 Options: -d DIR      working directory [$opts{d}]
@@ -67,6 +67,7 @@ for my $pre (sort keys %hash) {
   open($fh, "| gnuplot") || die;
   my $h = $yskip + @ARGV * $height + ($hash_rho{$pre}? $height*0.7 : 0.0);
   my $maxy = $opts{Y}? qq(set yran [0:$opts{Y}];) : '';
+  print $fh qq(set log y) if defined $opts{L};
   print $fh qq(
 set t po eps co so 16;
 set out "$opts{d}/$pre.eps";
