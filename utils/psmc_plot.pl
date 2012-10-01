@@ -9,8 +9,8 @@ use Getopt::Std;
 my $version = "0.2.0";
 
 my %opts = (u=>2.5e-8, 's'=>100, Y=>0, m=>5, X=>0, M=>'', x=>10000, n=>20, g=>25, f=>"Helvetica,16",
-			w=>4, P=>"right top", T=>'');
-getopts('x:u:s:X:Y:RSGpm:n:M:N:g:f:w:P:T:', \%opts);
+			w=>4, P=>"right top", T=>'', N=>0.0);
+getopts('x:u:s:X:Y:RSGpm:n:M:N:g:f:w:P:T:L', \%opts);
 die("
 Usage:   psmc_plot.pl [options] <out.prefix> <in.psmc>\n
 Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
@@ -26,7 +26,9 @@ Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
          -w INT     line width [$opts{w}]
          -P STR     position of the keys [$opts{P}]
          -T STR     figure title [null]
-		 -S         no scaling
+         -N FLOAT   false negative rate [0]
+         -S         no scaling
+         -L         show the last bin
          -p         convert to PDF (with epstopdf)
          -R         do not remove temporary files
          -G         plot grid
@@ -34,7 +36,7 @@ Options: -u FLOAT   absolute mutation rate per nucleotide [$opts{u}]
 
 my $prefix = shift(@ARGV);
 my $scaling = defined($opts{S})? 0 : 1;
-my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt, @xshift, $N_scale);
+my (@data, $d, $N0, $skip, $Mseg, $Msize, $id, $min_ri, $do_store, $gof, $round, @FN, @nscale, @tscale, @alpha, $dt, @xshift, $N_scale, $fn0);
 
 # initialize modifiers
 if ($opts{M}) {
@@ -50,6 +52,7 @@ if ($opts{M}) {
 	$alpha[$_] = 2 * (2 + $alpha[$_]) / 3.0 / (1 + $alpha[$_]);
   }
 }
+$fn0 = $opts{N};
 
 # load data
 
@@ -84,6 +87,7 @@ while (<>) {
 	($d->{T}, $d->{R}) = ($1/$skip, $2/$skip);
 	$N_scale = 1.0;
 	$N_scale /= 1.0 - $FN[$id-1] if (defined $FN[$id-1]);
+	$N_scale /= 1.0 - $fn0;
 	$N_scale /= $alpha[$id-1] if (defined $alpha[$id-1]);
 	$N0 = $1/$skip / (4 * $opts{u}) * $N_scale;
 	$d->{N0} = $N0;
@@ -91,7 +95,7 @@ while (<>) {
   } elsif ($do_store && /^DT\s(\S+)/) {
   	$dt = $1;
   } elsif ($do_store && /^RS\s(\d+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)\s(\S+)/) { # psmc-0.6.0-5 or above
-  	next if $1 > $max_intv;
+  	next if (!defined($opts{L}) && $1 > $max_intv);
 	my $s = (defined $nscale[$id-1])? $nscale[$id-1] : 1.0;
 	my $t = (defined $tscale[$id-1])? $tscale[$id-1] : 0.0;
 	my $x = (defined $xshift[$id-1])? $xshift[$id-1] : 0.0;
