@@ -30,7 +30,7 @@ sub main {
   print "N ", scalar(@{$h{_}}), "\n";
   if ($opts{u} < 0) {
 	for my $x (0 .. @$a-1) {
-		print "H $a->[$x][0]\t$a->[$x][1]\n";
+		print "H ", $a->[$x][0], "\t", $a->[$x][1], "\n";
 	}
   } else {
   	my $N0 = $h{T} / 4 / $opts{u};
