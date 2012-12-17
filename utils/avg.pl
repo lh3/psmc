@@ -7,23 +7,23 @@ use Getopt::Std;
 my %opts = (n=>20, s=>100, b=>0, e=>999);
 getopts('n:s:b:e:', \%opts);
 
-my $flag = 0;
-my ($theta, @t, @s, $MT);
+my ($flag, $DT) = (0, 0);
+my ($theta, @t, @s);
 while (<>) {
 	$flag = 1 if (/^RD\t(\d+)/ && $1 == $opts{n});
 	if ($flag) {
 		$theta = $1 / $opts{s} if (/^TR\t(\S+)/);
-		$MT = $1 if /^MT\t(\S+)/;
-		if (/^RS\t(\S+)\t(\S+)\t(\S+)/) {
-			$t[$1] = $2 * $theta; $s[$1] = $3 * $theta;
-		}
+		$DT = $1 * $theta if /^DT\t(\S+)/;
+		($t[$1], $s[$1]) = ($2 * $theta, $3 * $theta) if /^RS\t(\S+)\t(\S+)\t(\S+)/;
 		last if (/^\/\//);
 	}
 }
 push(@t, 1000);
+$opts{b} = $opts{b} > $DT? $opts{b} : 0;
+$opts{e} = $opts{e} > $DT? $opts{e} : 0;
+my $n = @s;
 #for my $k (0 .. $#s) { print("$t[$k]\t$t[$k+1]\t$s[$k]\n"); }
 
-my $n = @s;
 my @alpha = (1);
 for my $k (1 .. $n) {
 	$alpha[$k] = $alpha[$k-1] * exp(-($t[$k] - $t[$k-1]) / $s[$k-1]);
