@@ -8,8 +8,8 @@ use Getopt::Std;
 exit;
 
 sub main {
-  my %opts = (n=>2, L=>30000000, s=>100, u=>2.5e-8, R=>10, g=>25, d=>-1); # u is useless actually
-  getopts("n:L:s:u:r:R:Mg:d:", \%opts);
+  my %opts = (n=>2, L=>30000000, s=>100, u=>2.5e-8, R=>10, g=>25, d=>-1, r=>1); # u is useless actually
+  getopts("n:L:s:u:r:R:Mg:d:r:", \%opts);
   die(qq/
 Usage:   history2ms.pl [options] <in.psmc.par>
 
@@ -20,6 +20,7 @@ Options: -n INT    number of chromosome to simulate [$opts{n}]
          -R FLOAT  recomb. rate in hotspots are FLOAT times larger [$opts{R}]
          -g INT    years per generation [$opts{g}]
          -d INT    divergence time [0]
+         -r INT    # replicates [$opts{r}]
          -M        output macs command line
 \n/) if (-t STDIN && @ARGV == 0);
   my ($theta, $rho, $n_lambda, $k, @rst, $N);
@@ -52,7 +53,7 @@ Options: -n INT    number of chromosome to simulate [$opts{n}]
 	  $opts{d} /= 4 * $N0;
 	  $ms_pop = "-I 2 2 1 -ej $opts{d} 2 1 -en 0 2 0.001";
   }
-  my $ms_cmd = defined($opts{M})? "macs $opts{n} $opts{L} -t $macs_theta -r $macs_rho" : "msHOT-lite $opts{n} 1 -t $ms_theta -r $ms_rho $opts{L} -l $ms_pop";
+  my $ms_cmd = defined($opts{M})? "macs $opts{n} $opts{L} -t $macs_theta -r $macs_rho" : "msHOT-lite $opts{n} $opts{r} -t $ms_theta -r $ms_rho $opts{L} -l $ms_pop";
   for my $p (@rst) {
 	$p->{B} /= 4 * $N0; $p->{L} /= $N0;
 	next if ($p->{B} == 0.0);
