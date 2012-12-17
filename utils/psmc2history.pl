@@ -58,14 +58,18 @@ sub parse_pattern {
   }
   return ($n_lambda, @ret);
 }
+
 sub parse_param {
   my ($line, $ret) = @_;
   @_ = split(/\s+/, $line);
-  $ret->{P} = shift; $ret->{T} = shift; $ret->{R} = shift;
+  $ret->{P} = shift; $ret->{T} = shift; $ret->{R} = shift; $ret->{MT} = shift;
   my ($n_lambda, @pat) = &parse_pattern($ret->{P});
   my $a = \@{$ret->{_}};
   $a->[$_][1] = shift for (0 .. $n_lambda-1);
-  $a->[0][0] = 0;
-  $a->[$pat[$_]+1][0] = $_[$_] for (0 .. @_-1);
+  my $alpha = 0.1; # PSMC default
+  my $beta = log(1. + $ret->{MT} / $alpha) / (@pat - 1);
+  for (0 .. @pat-1) {
+  	$a->[$pat[$_]][0] = $alpha * (exp($beta * $_) - 1) unless defined($a->[$pat[$_]][0]);
+  }
   pop(@$a) if (!defined($a->[$n_lambda][1]));
 }
