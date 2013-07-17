@@ -74,6 +74,9 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	fprintf(pp->fpout, "PA\t%s", pp->pattern);
 	for (k = 0; k != pd->n_params; ++k)
 		fprintf(pp->fpout, " %.9lf", pd->params[k]);
+	if (pp->inp_ti)
+		for (k = 0; k <= pp->n; ++k)
+			fprintf(pp->fpout, " %.9lf", pp->inp_ti[k]);
 	fprintf(pp->fpout, "\n//\n");
 	fflush(pp->fpout);
 	free(lambda);
@@ -95,6 +98,12 @@ void psmc_read_param(psmc_par_t *pp) // FIXME: not working for the divergence mo
 	pp->inp_pa = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n_free + PSMC_N_PARAMS + 1));
 	for (k = 0; k != pp->n_free + PSMC_N_PARAMS; ++k)
 		fscanf(fp, "%lf", &pp->inp_pa[k]);
+	if (pp->inp_pa[2] < 0) { // then read time intervals
+		pp->inp_ti = (FLOAT*)calloc(pp->n + 1, sizeof(double));
+		for (k = 0; k <= pp->n; ++k)
+			fscanf(fp, "%lf", &pp->inp_ti[k]);
+		//pp->inp_pa[2] = pp->inp_ti[pp->n];
+	} else pp->inp_ti = 0;
 	if (fscanf(fp, "%lf", &pp->inp_pa[k]) > 0)
 		pp->dt0 = pp->inp_pa[k], pp->flag |= PSMC_F_DIVERG;
 	/* for other stuff */

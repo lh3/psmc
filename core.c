@@ -3,14 +3,19 @@
 #include <string.h>
 #include "psmc.h"
 
-void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha)
+void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha, FLOAT *inp_ti)
 {
 	int k;
-	FLOAT beta;
-	beta = log(1.0 + max_t / alpha) / n; // beta controls the sizes of intervals
-	for (k = 0; k < n; ++k)
-		t[k] = alpha * (exp(beta * k) - 1);
-	t[n] = max_t; t[n+1] = PSMC_T_INF; // the infinity: exp(PSMC_T_INF) > 1e310 = inf
+	if (inp_ti == 0) {
+		FLOAT beta;
+		beta = log(1.0 + max_t / alpha) / n; // beta controls the sizes of intervals
+		for (k = 0; k < n; ++k)
+			t[k] = alpha * (exp(beta * k) - 1);
+		t[n] = max_t; t[n+1] = PSMC_T_INF; // the infinity: exp(PSMC_T_INF) > 1e310 = inf
+	} else {
+		memcpy(t, inp_ti, (n+1) * sizeof(FLOAT));
+		t[n+1] = PSMC_T_INF;
+	}
 }
 
 psmc_data_t *psmc_new_data(psmc_par_t *pp)
@@ -69,7 +74,7 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 	theta = pd->params[0]; rho = pd->params[1]; max_t = pd->params[2];
 	for (k = 0; k <= n; ++k)
 		lambda[k] = pd->params[pp->par_map[k] + PSMC_N_PARAMS];
-	psmc_update_intv(pp->n, pd->t, max_t, pp->alpha);
+	psmc_update_intv(pp->n, pd->t, max_t, pp->alpha, pp->inp_ti);
 	// set the divergence time parameter if necessary
 	if (pp->flag & PSMC_F_DIVERG) {
 		dt = pd->params[pd->n_params - 1];

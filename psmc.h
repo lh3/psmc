@@ -38,6 +38,7 @@ typedef struct
 	FILE *fpout, *fpcnt;
 
 	FLOAT *inp_pa; // parameters from the input
+	FLOAT *inp_ti;
 
 	int flag;
 	int n_iters; // number of iterations
@@ -91,7 +92,7 @@ extern "C" {
 	// simulate sequences
 	void psmc_simulate(const psmc_par_t *pp, const psmc_data_t *pd);
 
-	void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha);
+	void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha, FLOAT *inp_ti);
 
 #ifdef __cplusplus
 }
