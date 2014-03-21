@@ -35,19 +35,24 @@ int main(int argc, char *argv[])
 {
 	gzFile fp;
 	kseq_t *seq;
-	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0, tv_only = 0, ts_only = 0;
-	while ((c = getopt(argc, argv, "q:xg:s:vn")) >= 0) {
+	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0, tv_only = 0, ts_only = 0, cpg_only = 0;
+	while ((c = getopt(argc, argv, "q:xg:s:vnc")) >= 0) {
 		switch (c) {
 		case 'q': min_qual = atoi(optarg); break;
 		case 'x': mask_pseudo = 1; break;
 		case 'v': tv_only = 1; break;
 		case 'n': ts_only = 1; break;
+		case 'c': cpg_only = 1; break;
 		case 'g': n_min_good = atoi(optarg); break;
 		case 's': BLOCK_LEN = atoi(optarg); break;
 		}
 	}
+	if (tv_only + ts_only + cpg_only > 1) {
+		fprintf(stderr, "[E::%s] only one of the options -c, -n and -v can be applied\n");
+		return 2;
+	}
 	if (argc == optind) {
-		fprintf(stderr, "Usage: fq2psmcfa [-nvx] [-q %d] [-g %d] [-s %d] <in.fq>\n", min_qual, n_min_good, BLOCK_LEN);
+		fprintf(stderr, "Usage: fq2psmcfa [-cnvx] [-q %d] [-g %d] [-s %d] <in.fq>\n", min_qual, n_min_good, BLOCK_LEN);
 		return 1;
 	}
 	fp = strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
@@ -69,8 +74,7 @@ int main(int argc, char *argv[])
 				int c = seq_nt16_table[(int)seq->seq.s[i]];
 				if (c == 5 || c == 10) seq->seq.s[i] = tolower(seq->seq.s[i]);
 			}
-		}
-		if (ts_only) {
+		} else if (ts_only) {
 			int pre = -1;
 			for (i = 0; i < seq->seq.l; ++i) {
 				int c = seq_nt16_table[(int)seq->seq.s[i]];
@@ -79,6 +83,19 @@ int main(int argc, char *argv[])
 					seq->seq.s[i-1] = tolower(seq->seq.s[i-1]);
 				} else if (c == 3 || c == 9 || c == 6 || c == 12)
 					seq->seq.s[i] = tolower(seq->seq.s[i]);
+				pre = c;
+			}
+		} else if (cpg_only) {
+			int pre = -1;
+			for (i = 0; i < seq->seq.l; ++i) {
+				int c = seq_nt16_table[(int)seq->seq.s[i]];
+				if (c == 3 || c == 9 || c == 6 || c == 12) {
+					seq->seq.s[i] = tolower(seq->seq.s[i]);
+				} else if (i > 0 && pre == 10 && c != 4 && c != 5) {
+					seq->seq.s[i-1] = tolower(seq->seq.s[i-1]);
+				} else if (i > 0 && c == 5 && pre != 2 && pre != 10) {
+					seq->seq.s[i] = tolower(seq->seq.s[i]);
+				}
 				pre = c;
 			}
 		}

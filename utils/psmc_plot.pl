@@ -212,6 +212,7 @@ print $fh qq(
   set style line 10 lt 1 lc rgb "#800000" $lw;
   set style line 11 lt 1 lc rgb "#67B7F7" $lw;
   set style line 12 lt 1 lc rgb "#FFC127" $lw;
+  set style line 32 lt 1 lc rgb "#FFC0C0" lw 1;
   plot );
 if ($opts{M}) {
   my @titles = split(/[,;]/, $opts{M});
@@ -224,7 +225,7 @@ if ($opts{M}) {
 	print $fh ", " if ($i != $#data);
   }
 } else {
-  foreach my $i (1 .. @data-1) { print $fh qq("$prefix.$i.txt" u 1:2 w st not ls 2, ); }
+  foreach my $i (1 .. @data-1) { print $fh qq("$prefix.$i.txt" u 1:2 w st not ls 32, ); }
   print $fh qq("$prefix.0.txt" u 1:2 t "popsize" w st ls 1);
   #print $fh qq(, "$prefix.0.txt" u 1:3 t "#segments" axis x1y2 w st 3);
   print $fh qq(;\n);
