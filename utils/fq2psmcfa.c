@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (tv_only + ts_only + cpg_only > 1) {
-		fprintf(stderr, "[E::%s] only one of the options -c, -n and -v can be applied\n");
+		fprintf(stderr, "[E::%s] only one of the options -c, -n and -v can be applied\n", __func__);
 		return 2;
 	}
 	if (argc == optind) {
