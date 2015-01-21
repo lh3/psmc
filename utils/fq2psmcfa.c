@@ -35,20 +35,21 @@ int main(int argc, char *argv[])
 {
 	gzFile fp;
 	kseq_t *seq;
-	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0, tv_only = 0, ts_only = 0, cpg_only = 0;
-	while ((c = getopt(argc, argv, "q:xg:s:vnc")) >= 0) {
+	int c, len, n_min_good = 10000, min_qual = 10, mask_pseudo = 0, tv_only = 0, ts_only = 0, cpg_only = 0, cpg_excl = 0;
+	while ((c = getopt(argc, argv, "q:xg:s:vncC")) >= 0) {
 		switch (c) {
 		case 'q': min_qual = atoi(optarg); break;
 		case 'x': mask_pseudo = 1; break;
 		case 'v': tv_only = 1; break;
 		case 'n': ts_only = 1; break;
 		case 'c': cpg_only = 1; break;
+		case 'C': cpg_excl = 1; break;
 		case 'g': n_min_good = atoi(optarg); break;
 		case 's': BLOCK_LEN = atoi(optarg); break;
 		}
 	}
-	if (tv_only + ts_only + cpg_only > 1) {
-		fprintf(stderr, "[E::%s] only one of the options -c, -n and -v can be applied\n", __func__);
+	if (tv_only + ts_only + cpg_only + cpg_excl > 1) {
+		fprintf(stderr, "[E::%s] only one of the options -c, -n, -v and -C can be applied\n", __func__);
 		return 2;
 	}
 	if (argc == optind) {
@@ -95,6 +96,16 @@ int main(int argc, char *argv[])
 					seq->seq.s[i-1] = tolower(seq->seq.s[i-1]);
 				} else if (i > 0 && c == 5 && pre != 2 && pre != 10) {
 					seq->seq.s[i] = tolower(seq->seq.s[i]);
+				}
+				pre = c;
+			}
+		} else if (cpg_excl) {
+			int pre = -1;
+			for (i = 0; i < seq->seq.l; ++i) {
+				int c = seq_nt16_table[(int)seq->seq.s[i]];
+				if (i > 0 && (c == 4 || c == 5) && (pre == 2 || pre == 10)) {
+					seq->seq.s[i] = tolower(seq->seq.s[i]);
+					seq->seq.s[i-1] = tolower(seq->seq.s[i-1]);
 				}
 				pre = c;
 			}
