@@ -1,8 +1,8 @@
 CC=			gcc
-CFLAGS=		-g -Wall -O2
+CFLAGS=		-g -Wall -O2 -Wno-unused-function
 DFLAGS=		
 OBJS=		
-PROG=		cntcpg fq2psmcfa splitfa
+PROG=		cntcpg fq2psmcfa splitfa calD mutDiff
 LIBS=		-lm -lz
 
 .SUFFIXES:.c .o
@@ -13,13 +13,19 @@ LIBS=		-lm -lz
 all:$(PROG)
 
 fq2psmcfa:fq2psmcfa.o
-		$(CC) fq2psmcfa.o -o $@ $(LIBS)
+		$(CC) $< -o $@ $(LIBS)
 
 splitfa:splitfa.o
-		$(CC) splitfa.o -o $@ $(LIBS)
+		$(CC) $< -o $@ $(LIBS)
 
 cntcpg:cntcpg.o
-		$(CC) cntcpg.o -o $@ $(LIBS)
+		$(CC) $< -o $@ $(LIBS)
+
+calD:calD.o
+		$(CC) $< -o $@ $(LIBS)
+
+mutDiff:mutDiff.o
+		$(CC) $< -o $@ $(LIBS)
 
 clean:
 		rm -f *.o a.out* *~ *.a $(PROG)
