@@ -192,13 +192,14 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			free(prob);
 		}
 		if (pp->fpcnt) { // very similar to full decoding above
-			int32_t *cnt1, l;
+			int32_t *cnt1, l, min_l;
 			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
 			fread(&l, 4, 1, pp->fpcnt);
 			assert(l >= s->L); // FIXME: if there are very short sequence in the input, fpcnt may be different from the input!!!
 			cnt1 = calloc(l * n_cnt, 4);
 			fread(cnt1, n_cnt * l, 4, pp->fpcnt);
-			for (k = 1; k <= s->L; ++k) {
+			min_l = s->L < l? s->L : l;
+			for (k = 1; k <= min_l; ++k) {
 				int j, l;
 				hmm_post_state(hp, hd, k, prob);
 				for (l = 0; l < hp->n; ++l)
