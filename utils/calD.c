@@ -297,6 +297,7 @@ int main(int argc, char *argv[])
 		gzclose(fp[i]);
 	}
 	if (h) stk_reg_destroy(h);
+	if (is_binary) goto end_main;
 
 	if (!is_3) { // block jack-knife for D
 		long s_ABBA = 0, s_BABA = 0;
@@ -332,6 +333,7 @@ int main(int argc, char *argv[])
 		printf("D3\t%f\t%f\t%f\n", e, sqrt(var), e / sqrt(var));
 	}
 
+end_main:
 	free(a);
 	return 0;
 }
