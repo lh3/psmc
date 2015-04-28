@@ -196,7 +196,7 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
 			fread(&l, 4, 1, pp->fpcnt);
 			assert(l >= s->L); // FIXME: if there are very short sequence in the input, fpcnt may be different from the input!!!
-			cnt1 = malloc(l * n_cnt * 4);
+			cnt1 = calloc(l * n_cnt, 4);
 			fread(cnt1, n_cnt * l, 4, pp->fpcnt);
 			for (k = 1; k <= s->L; ++k) {
 				int j, l;

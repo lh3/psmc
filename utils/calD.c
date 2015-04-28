@@ -187,16 +187,20 @@ typedef struct {
 int main(int argc, char *argv[])
 {
 	stat_t *a = 0;
-	int i, c, win_size = 1000000, max_a = 0, shift = 0, n_seqs = 0, is_3 = 0, q_thres = 0, n_files;
+	int i, c, win_size = 1000000, max_a = 0, shift = 0, n_seqs = 0, is_3 = 0, q_thres = 0, n_files, step = 100, is_binary = 0, is_binning = 0;
+	int32_t tmp;
 	reghash_t *h = 0;
 	gzFile fp[4];
 	kseq_t *ks[4];
 
-	while ((c = getopt(argc, argv, "w:3q:M:")) >= 0) {
+	while ((c = getopt(argc, argv, "w:3q:M:s:bB")) >= 0) {
 		if (c == 'w') win_size = atoi(optarg);
 		else if (c == '3') is_3 = 1;
 		else if (c == 'q') q_thres = atoi(optarg);
 		else if (c == 'M') h = stk_reg_read(optarg);
+		else if (c == 'b') is_binary = 1;
+		else if (c == 'B') is_binning = 1;
+		else if (c == 's') step = atoi(optarg);
 	}
 	n_files = argc - optind;
 	if (n_files < 4) {
@@ -205,6 +209,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "  -w INT     window size for block Jack-Knife [%d]\n", win_size);
 		fprintf(stderr, "  -q INT     quality threshold [%d]\n", q_thres);
 		fprintf(stderr, "  -M FILE    mask regions in BED FILE [null]\n");
+		fprintf(stderr, "  -s INT     step size (effective with -b) [%d]\n", step);
+		fprintf(stderr, "  -b         binary output\n");
 		return 1;
 	}
 
@@ -217,8 +223,12 @@ int main(int argc, char *argv[])
 		}
 		ks[i] = kseq_init(fp[i]);
 	}
+	if (is_binary) {
+		tmp = 2;
+		fwrite(&tmp, 4, 1, stdout);
+	}
 	while (kseq_read(ks[0]) >= 0) {
-		int l, min_l = 1<<30;
+		int l, min_l = 1<<30, z[2];
 		for (i = 1; i < n_files; ++i)
 			if (kseq_read(ks[i]) < 0) break;
 		if (i != n_files) break; // finish
@@ -236,9 +246,19 @@ int main(int argc, char *argv[])
 		for (i = 0; i < n_files; ++i)
 			if (min_l > ks[i]->seq.l)
 				min_l = ks[i]->seq.l;
+		if (is_binary) {
+			tmp = (min_l + step - 1) / step;
+			fwrite(&tmp, 4, 1, stdout); // write length
+		}
 		// core loop
+		z[0] = z[1] = 0;
 		for (l = 0; l < min_l; ++l) {
 			int c[4], b[4], win = shift + l / win_size;
+			if (l && l % step == 0) {
+				if (is_binning) z[0] = !!z[0], z[1] = !!z[1];
+				if (is_binary) fwrite(z, 4, 2, stdout);
+				z[0] = z[1] = 0;
+			}
 			if (win >= max_a) {
 				int old_max = max_a;
 				max_a = win + 1;
@@ -264,9 +284,11 @@ int main(int argc, char *argv[])
 			if (b[0] == b[1] && b[1] != b[2] && b[2] == b[3]) ++a[win].n_hom;
 			else if (b[0] != b[1] && b[2] != b[3]) ++a[win].n_het;
 			if (b[2] == b[3] || b[0] == b[1]) continue; // not ABBA or BABA
-			if (b[0] == b[3]) ++a[win].n_ABBA;
-			else ++a[win].n_BABA;
+			if (b[0] == b[3]) ++a[win].n_ABBA, ++z[0];
+			else ++a[win].n_BABA, ++z[1];
 		}
+		if (is_binning) z[0] = !!z[0], z[1] = !!z[1];
+		if (is_binary) fwrite(z, 4, 2, stdout);
 		shift += min_l / win_size + 1;
 		++n_seqs;
 	}
