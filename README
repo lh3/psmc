@@ -96,3 +96,26 @@ and use scaled mutation rate to represent population size:
 
 where, again, t_k and \lambda_k are given at the "RS" line, \theta_0 at the
 "TR" line and s is the bin size, which defaults to 100 in fq2psmcfa.
+
+
+APPENDIX II: Correcting for low coverage
+========================================
+
+For diploid genomes sequenced to low coverage, heterozygotes will be randomly
+lost due to the lack of coverage of both alleles. This has the same effect as
+smaller mutation rate and can be corrected. If you know the fraction of hets
+missed due to low coverage, you can generate the PSMC plot with:
+
+  psmc_plot.pl -M "sample1=0.1,sample2=0.2" prefix sample1.psmc sample2.psmc
+
+This says that sample1 has 10% false negative rate (FNR) on hets and sample2
+has 20%. The plotting script does not correct FNR for bootstrapping. If you
+want to plot the result with your own scripts, you can increase \theta_0 to
+\theta_0/(1-FNR).
+
+Unfortunately, I haven't found a reliable way to estimate the background FNR
+relevant to PSMC. The simple and unscientific approach is to align the PSMC
+curves by eye. Probably a better solution is to downsample a high-coverage
+sample to a certain coverage and measures FNR. I have not done this.
+
+Not correcting for low coverage is the most common pitfall when using PSMC.
