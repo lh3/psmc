@@ -131,3 +131,32 @@ void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd) // calculate the a_{
 	// free
 	free(q); free(alpha); free(beta); free(q_aux); free(lambda); free(tau);
 }
+// compute the average time for each interval; a strip-down version of psmc_update_hmm()
+void psmc_avg_t(const psmc_par_t *pp, const psmc_data_t *pd, double *avg_t)
+{
+	FLOAT sum_t, *alpha, *lambda, rho = pd->params[1], *tau, dt = 0;
+	int k, n = pp->n;
+	lambda = (FLOAT*)alloca(sizeof(FLOAT) * (n + 1)); // \lambda_k
+	alpha = (FLOAT*)alloca(sizeof(FLOAT) * (n + 2)); // \alpha_k
+	tau = (FLOAT*)alloca(sizeof(FLOAT) * (n + 1)); // \tau_k
+	for (k = 0; k <= n; ++k)
+		lambda[k] = pd->params[pp->par_map[k] + PSMC_N_PARAMS];
+	if (pp->flag & PSMC_F_DIVERG) {
+		dt = pd->params[pd->n_params - 1];
+		if (dt < 0) dt = 0;
+	}
+	for (k = 0; k <= n; ++k) tau[k] = pd->t[k+1] - pd->t[k];
+	for (k = 1, alpha[0] = 1.0; k <= n; ++k)
+		alpha[k] = alpha[k-1] * exp(-tau[k-1] / lambda[k-1]);
+	alpha[k] = 0.0;
+	for (k = 0, sum_t = 0.0; k <= n; ++k) {
+		FLOAT ak1, lak, pik;
+		ak1 = alpha[k] - alpha[k+1]; lak = lambda[k]; // just for convenient
+		pik = (ak1 * (sum_t + lak) - alpha[k+1] * tau[k]) / pd->C_pi;
+		avg_t[k] = - log(1.0 - pik / (pd->C_sigma*pd->sigma[k])) / rho;
+		if (isnan(avg_t[k]) || avg_t[k] < sum_t || avg_t[k] > sum_t + tau[k]) // in case something bad happens
+			avg_t[k] = sum_t + (lak - tau[k] * alpha[k+1] / (alpha[k] - alpha[k+1]));
+		avg_t[k] += dt;
+		sum_t += tau[k];
+	}
+}

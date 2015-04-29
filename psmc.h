@@ -81,8 +81,7 @@ extern "C" {
 	void psmc_delete_data(psmc_data_t *pd);
 	// calculate HMM parameters given population parameters
 	void psmc_update_hmm(const psmc_par_t *pp, psmc_data_t *pd);
-	// rescaled version
-	void psmc_update_hmm_rescale(const psmc_par_t *pp, psmc_data_t *pd);
+	void psmc_avg_t(const psmc_par_t *pp, const psmc_data_t *pd, double *avg_t);
 	// Baum-Welch algorithm
 	FLOAT psmc_em(psmc_par_t *pp, psmc_data_t *data);
 	// calculate and print decoding

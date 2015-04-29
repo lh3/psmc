@@ -1,5 +1,5 @@
 CC=			gcc
-CFLAGS=		-g -Wall -O2
+CFLAGS=		-g -Wall -O2 -Wno-unused-function
 DFLAGS=		
 OBJS=		khmm.o kmin.o cli.o core.o em.o aux.o
 PROG=		psmc

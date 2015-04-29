@@ -116,28 +116,21 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 {
 	hmm_par_t *hp = pd->hp;
 	int i, k, prev, start;
-	FLOAT p, q, *t, *t2, *t_min;
-	double *cnt = 0;
+	FLOAT p, q, *t;
+	double *cnt = 0, theta = pd->params[0];
 	int32_t n_cnt;
 	// compute the time intervals and the coalescent average
-	t = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 1));
+	t = (FLOAT*)alloca(sizeof(FLOAT) * (pp->n + 1));
+	psmc_avg_t(pp, pd, t);
 	for (k = 0; k <= pp->n; ++k) {
-		t[k] = (pd->t[k] + 1.0 - (pd->t[k+1] - pd->t[k]) / (exp(pd->t[k+1]) / exp(pd->t[k]) - 1.0)) / pd->C_pi;
-		if (pp->flag & PSMC_F_FULLDEC) fprintf(pp->fpout, "TC\t%d\t%lf\t%lf\t%lf\n", k, t[k], pd->t[k], pd->t[k+1]);
-	}
-	t2 = (FLOAT*)malloc(sizeof(FLOAT) * pp->n_free);
-	t_min = (FLOAT*)malloc(sizeof(FLOAT) * pp->n_free);
-	t_min[0] = 0;
-	for (k = i = 0, p = 0; k < pp->n_free; ++k) {
-		for (; i < pp->n; ++i) if (pp->par_map[i] == k) break;
-		t_min[k] = pd->t[i];
-		prev = i;
-		for (; i < pp->n; ++i) if (pp->par_map[i] > k) break;
-		t2[k] = (pd->t[prev] + 1.0 - (pd->t[i] - pd->t[prev]) / (exp(pd->t[i]) / exp(pd->t[prev]) - 1.0)) / pd->C_pi;
+		if (t[k] < pd->t[k] || t[k] > pd->t[k+1])
+			fprintf(stderr, "ERROR: (%f <= %f <= %f) does not stand. Contact me if you see this.\n", pd->t[k], t[k], pd->t[k+1]);
+		fprintf(pp->fpout, "TC\t%d\t%lf\t%lf\t%lf\n", k, pd->t[k] * theta, t[k] * theta, pd->t[k+1] * theta);
 	}
 	if (pp->fpcnt) {
 		fread(&n_cnt, 4, 1, pp->fpcnt); // read the number of counts per base
-		cnt = (double*)calloc((pp->n + 1) * n_cnt, sizeof(double));
+		cnt = (double*)alloca((pp->n + 1) * n_cnt * sizeof(double));
+		memset(cnt, 0, (pp->n + 1) * n_cnt * sizeof(double));
 	}
 	// the core part
 	hmm_pre_backward(hp);
@@ -159,18 +152,13 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			for (k = 2; k <= s->L; ++k) {
 				if (prev != x[k]) {
 					kl = pp->par_map[prev];
-					fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%.5f\t%.5f\t%.5f\n", s->name, start, k-1, kl,
-							t_min[kl], t2[kl], kl == pp->n_free-1? pp->max_t * 2. : t_min[kl+1]);
-//					fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%.3lf\t%.2lf\n", s->name, start, k-1, prev, t[prev], p);
+					fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%lf\t%.3lf\n", s->name, start, k-1, prev, t[prev] * theta, p);
 					prev = x[k]; start = k; p = 0.0;
 				}
 				q = hd->f[k][x[k]] * hd->b[k][x[k]] * hd->s[k];
 				if (p < q) p = q;
 			}
-//			fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%.3lf\t%.2lf\n", s->name, start, k-1, prev, t[prev], p);
-			kl = pp->par_map[prev];
-			fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%.5f\t%.5f\t%.5f\n", s->name, start, k-1, kl,
-					t_min[kl], t2[kl], kl == pp->n_free-1? pp->max_t * 2. : t_min[kl+1]);
+			fprintf(pp->fpout, "DC\t%s\t%d\t%d\t%d\t%.3lf\t%.2lf\n", s->name, start, k-1, prev, t[prev] * theta, p);
 			fflush(pp->fpout);
 		} else if (pp->flag & PSMC_F_DECODE) { // full decoding
 			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
@@ -221,7 +209,6 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			fprintf(pp->fpout, "\n");
 		}
 	}
-	free(t); free(t2); free(t_min); free(cnt);
 }
 
 void psmc_simulate(const psmc_par_t *pp, const psmc_data_t *pd)
