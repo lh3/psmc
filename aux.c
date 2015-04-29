@@ -195,7 +195,8 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 			int32_t *cnt1, l, min_l;
 			FLOAT *prob = (FLOAT*)malloc(sizeof(FLOAT) * hp->n);
 			fread(&l, 4, 1, pp->fpcnt);
-			assert(l >= s->L); // FIXME: if there are very short sequence in the input, fpcnt may be different from the input!!!
+			if (l != s->L)
+				fprintf(stderr, "WARNING: chromosome length difference %d != %d\n", s->L, l);
 			cnt1 = calloc(l * n_cnt, 4);
 			fread(cnt1, n_cnt * l, 4, pp->fpcnt);
 			min_l = s->L < l? s->L : l;
