@@ -284,8 +284,8 @@ int main(int argc, char *argv[])
 			if (b[0] == b[1] && b[1] != b[2] && b[2] == b[3]) ++a[win].n_hom;
 			else if (b[0] != b[1] && b[2] != b[3]) ++a[win].n_het;
 			if (b[2] == b[3] || b[0] == b[1]) continue; // not ABBA or BABA
-			if (b[0] == b[3]) ++a[win].n_ABBA, ++z[0];
-			else ++a[win].n_BABA, ++z[1];
+			if (b[0] == b[3]) ++a[win].n_ABBA, ++z[1];
+			else ++a[win].n_BABA, ++z[0];
 		}
 		if (is_binning) z[0] = !!z[0], z[1] = !!z[1];
 		if (is_binary) fwrite(z, 4, 2, stdout);
