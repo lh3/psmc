@@ -48,12 +48,13 @@ Options: -n INT    number of chromosome to simulate [$opts{n}]
   my $ms_rho = $ms_theta * ($rho / $theta);
   my ($macs_theta, $macs_rho) = ($ms_theta/$opts{L}, $ms_rho/$opts{L});
   my $ms_pop = '';
+  my $n_tot = $opts{n};
   if ($opts{d} > 0) {
-	  $opts{n} = 3;
 	  $opts{d} /= 4 * $N0;
-	  $ms_pop = "-I 2 2 1 -ej $opts{d} 2 1 -en 0 2 0.001";
+	  $ms_pop = "-I 2 $opts{n} 1 -ej $opts{d} 2 1 -en 0 2 0.001";
+	  ++$n_tot;
   }
-  my $ms_cmd = defined($opts{M})? "macs $opts{n} $opts{L} -t $macs_theta -r $macs_rho" : "msHOT-lite $opts{n} $opts{r} -t $ms_theta -r $ms_rho $opts{L} -l $ms_pop";
+  my $ms_cmd = defined($opts{M})? "macs $opts{n} $opts{L} -t $macs_theta -r $macs_rho" : "msHOT-lite $n_tot $opts{r} -t $ms_theta -r $ms_rho $opts{L} -l $ms_pop";
   for my $p (@rst) {
 	$p->{B} /= 4 * $N0; $p->{L} /= $N0;
 	next if ($p->{B} == 0.0);
