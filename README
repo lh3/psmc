@@ -25,6 +25,11 @@ recommended to set -d to a third of the average depth and -D to twice.  Program
 the i-th character in the output sequence indicates whether there is at least
 one heterozygote in the bin [100i, 100i+100).
 
+For dipcall output, you may use the following to generate psmcfa:
+
+    seqtk mutfa ref.fa <(gzip -dc prefix.dip.vcf.gz|utils/vcf2snp.pl -) \
+      | seqtk seq -cM prefix.dip.bed -l80 | utils/fq2psmcfa - > prefix.psmcfa
+
 Program `psmc' infers the population size history. In particular, the `-p'
 option specifies that there are 64 atomic time intervals and 28 (=1+25+1+1)
 free interval parameters. The first parameter spans the first 4 atomic time
