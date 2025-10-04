@@ -10,7 +10,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 #define DEFAULT_PATTERN "4+5*3+4"
-#define PSMC_VERSION "0.6.5-r67"
+#define PSMC_VERSION "0.6.5-r73-dirty"
 
 static char conv_table[256] = {
 	 2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,
@@ -52,6 +52,7 @@ static void usage(psmc_par_t *p)
 	fprintf(stderr, "         -S          simulate sequence\n");
 	fprintf(stderr, "         -d          perform decoding\n");
 	fprintf(stderr, "         -D          print full posterior probabilities\n");
+	fprintf(stderr, "         -s          print probability\n");
 	fprintf(stderr, "\n");
 	psmc_delete_par(p);
 	exit(1);
@@ -171,11 +172,12 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 	int c, is_bootstrap = 0;
 	psmc_par_t *par;
 	par = psmc_new_par();
-	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT:")) >= 0) {
+	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT:s")) >= 0) {
 		switch (c) {
 		case 'S': par->flag |= PSMC_F_SIMU; break;
 		case 'd': par->flag |= PSMC_F_DECODE; break;
 		case 'D': par->flag |= PSMC_F_FULLDEC; break;
+		case 's': par->flag |= PSMC_F_PROB; break;
 		case 'T': par->dt0 = atof(optarg); if (par->dt0 >= 0) par->flag |= PSMC_F_DIVERG; break;
 		case 't': par->max_t = atof(optarg); break;
 		case 'l': par->alpha = atof(optarg); break;

@@ -17,6 +17,7 @@
 #define PSMC_F_FULLDEC  0x2
 #define PSMC_F_SIMU     0x4
 #define PSMC_F_DIVERG   0x8
+#define PSMC_F_PROB     0x10
 
 typedef struct
 {

@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
 		fprintf(pp->fpout, "RD\t%d\n", i+1);
 		psmc_print_data(pp, pd);
 	}
-	if ((pp->flag & PSMC_F_DECODE) || pp->fpcnt) psmc_decode(pp, pd);
+	if ((pp->flag & PSMC_F_DECODE) || pp->fpcnt || (pp->flag & PSMC_F_PROB))
+		psmc_decode(pp, pd);
 	if (pp->flag & PSMC_F_SIMU) psmc_simulate(pp, pd);
 	psmc_delete_data(pd);
 	psmc_delete_par(pp);

@@ -50,9 +50,8 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 {
 	int k;
 	FLOAT n_recomb = pp->sum_L / pd->C_sigma;
-	FLOAT theta0, rho0, *lambda, sum;
+	FLOAT *lambda, sum;
 	lambda = (FLOAT*)malloc(sizeof(FLOAT) * (pp->n + 1));
-	theta0 = pd->params[0]; rho0 = pd->params[1];
 	for (k = 0; k <= pp->n; ++k)
 		lambda[k] = pd->params[pp->par_map[k] + PSMC_N_PARAMS];
 	fprintf(pp->fpout, "LK\t%lf\n", pd->lk);
@@ -142,7 +141,13 @@ void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)
 		hd = hmm_new_data(s->L, seq, hp);
 		hmm_forward(hp, hd);
 		hmm_backward(hp, hd);
-		if (!(pp->flag & PSMC_F_FULLDEC) && (pp->flag & PSMC_F_DECODE)) { // posterior decoding
+		if (pp->flag & PSMC_F_PROB) { // print input probability
+			fprintf(pp->fpout, "PR\t%s\t%d", s->name, s->L);
+			for (k = 1; k <= s->L; ++k)
+				fprintf(pp->fpout, "\t%.3f", hd->s[k]);
+			fprintf(pp->fpout, "\n");
+			fflush(pp->fpout);
+		} else if (!(pp->flag & PSMC_F_FULLDEC) && (pp->flag & PSMC_F_DECODE)) { // posterior decoding
 			int *x, kl;
 			hmm_post_decode(hp, hd);
 			/* show path */
