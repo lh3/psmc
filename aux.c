@@ -80,6 +80,7 @@ void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd)
 	fflush(pp->fpout);
 	free(lambda);
 }
+
 void psmc_read_param(psmc_par_t *pp) // FIXME: not working for the divergence model
 {
 	FILE *fp;
@@ -109,6 +110,20 @@ void psmc_read_param(psmc_par_t *pp) // FIXME: not working for the divergence mo
 	pp->max_t = pp->inp_pa[2];
 	pp->tr_ratio = pp->inp_pa[0] / pp->inp_pa[1];
 	fclose(fp);
+}
+
+void psmc_cap_matrix(const psmc_par_t *pp, psmc_data_t *pd, int k0)
+{
+	int k, l;
+	assert(k0 > 0 && k0 < pp->n);
+	for (k = 0; k <= pp->n; ++k) {
+		double s = 0.0;
+		for (l = k0; l <= pp->n; ++l) {
+			s += pd->hp->a[k][l];
+			pd->hp->a[k][l] = 0.0;
+		}
+		pd->hp->a[k][k0] = s;
+	}
 }
 
 void psmc_decode(const psmc_par_t *pp, const psmc_data_t *pd)

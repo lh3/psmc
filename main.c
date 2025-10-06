@@ -18,8 +18,15 @@ int main(int argc, char *argv[])
 		fprintf(pp->fpout, "RD\t%d\n", i+1);
 		psmc_print_data(pp, pd);
 	}
-	if ((pp->flag & PSMC_F_DECODE) || pp->fpcnt || (pp->flag & PSMC_F_PROB))
+	if ((pp->flag & PSMC_F_DECODE) || pp->fpcnt || (pp->flag & PSMC_F_PROB)) {
+		if (pp->cap_k > 0) {
+			if (pp->cap_k >= pp->n)
+				fprintf(stderr, "ERROR: -C must be smaller than %d; option disabled\n", pp->n);
+			else
+				psmc_cap_matrix(pp, pd, pp->cap_k);
+		}
 		psmc_decode(pp, pd);
+	}
 	if (pp->flag & PSMC_F_SIMU) psmc_simulate(pp, pd);
 	psmc_delete_data(pd);
 	psmc_delete_par(pp);

@@ -10,7 +10,7 @@
 KSEQ_INIT(gzFile, gzread)
 
 #define DEFAULT_PATTERN "4+5*3+4"
-#define PSMC_VERSION "0.6.5-r73-dirty"
+#define PSMC_VERSION "0.6.5-r74-dirty"
 
 static char conv_table[256] = {
 	 2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,  2, 2, 2, 2,
@@ -53,6 +53,7 @@ static void usage(psmc_par_t *p)
 	fprintf(stderr, "         -d          perform decoding\n");
 	fprintf(stderr, "         -D          print full posterior probabilities\n");
 	fprintf(stderr, "         -s          print probability\n");
+	fprintf(stderr, "         -C INT      cap transition at INT [-1]\n");
 	fprintf(stderr, "\n");
 	psmc_delete_par(p);
 	exit(1);
@@ -143,6 +144,7 @@ psmc_par_t *psmc_new_par()
 	psmc_par_t *par;
 	par = (psmc_par_t*)calloc(1, sizeof(psmc_par_t));
 	par->n_iters = 30;
+	par->cap_k = -1;
 	par->fpout = stdout;
 	par->max_t = 15.0;
 	par->tr_ratio = 4.0;
@@ -172,7 +174,7 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 	int c, is_bootstrap = 0;
 	psmc_par_t *par;
 	par = psmc_new_par();
-	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT:s")) >= 0) {
+	while ((c = getopt(argc, argv, "i:t:l:r:N:p:o:dI:c:bSDT:sC:")) >= 0) {
 		switch (c) {
 		case 'S': par->flag |= PSMC_F_SIMU; break;
 		case 'd': par->flag |= PSMC_F_DECODE; break;
@@ -188,6 +190,7 @@ psmc_par_t *psmc_parse_cli(int argc, char *argv[])
 		case 'c': par->fpcnt = fopen(optarg, "rb"); assert(par->fpcnt); break;
 		case 'p': par->pattern = strdup(optarg); break;
 		case 'I': par->ran_init = atof(optarg); break;
+		case 'C': par->cap_k = atoi(optarg); break;
 		case 'b': is_bootstrap = 1; break;
 		default:  usage(par);
 		}

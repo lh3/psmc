@@ -43,6 +43,7 @@ typedef struct
 
 	int flag;
 	int n_iters; // number of iterations
+	int cap_k;
 	char *pre_fn; // previous results
 	char *pattern; // pattern
 	FLOAT max_t; // maximum time
@@ -91,6 +92,8 @@ extern "C" {
 	void psmc_print_data(const psmc_par_t *pp, const psmc_data_t *pd);
 	// simulate sequences
 	void psmc_simulate(const psmc_par_t *pp, const psmc_data_t *pd);
+
+	void psmc_cap_matrix(const psmc_par_t *pp, psmc_data_t *pd, int k0);
 
 	void psmc_update_intv(int n, FLOAT t[], FLOAT max_t, FLOAT alpha, FLOAT *inp_ti);
 
