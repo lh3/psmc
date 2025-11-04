@@ -95,15 +95,16 @@ function* k8_readline(fn) {
  ****************/
 
 function psmc_parse(fn, round, scale) {
-	let r = { theta0:-1, C_pi:-1, ri:-1, a:[] };
+	let r = { theta0:-1, rho0:-1, C_pi:-1, ri:-1, a:[] };
 	let s = 0;
 	for (const line of k8_readline(fn)) {
 		let m;
 		if ((m = /^RD\t(\d+)/.exec(line)) != null) {
 			if (parseInt(m[1]) == round)
 				s = 1;
-		} else if (s == 1 && (m = /^TR\t(\S+)/.exec(line)) != null) {
+		} else if (s == 1 && (m = /^TR\t(\S+)\t(\S+)/.exec(line)) != null) {
 			r.theta0 = parseFloat(m[1]);
+			r.rho0 = parseFloat(m[2]);
 		} else if (s == 1 && (m = /^RI\t(\S+)/.exec(line)) != null) {
 			r.ri = parseFloat(m[1]);
 		} else if (s == 1 && (m = /^MM\tC_pi: (\S+)/.exec(line)) != null) {
@@ -131,6 +132,7 @@ function psmc_select(r, d0) {
 }
 
 function psmc_avg(r, k0, scale) {
+	// calculate alpha[]
 	let alpha = [], x = 1.0;
 	for (let i = k0; i < r.a.length - 1; ++i) {
 		alpha.push(x);
@@ -138,10 +140,35 @@ function psmc_avg(r, k0, scale) {
 	}
 	alpha.push(x);
 	alpha.push(0.0);
-	let z = 0.0;
+	// calculate modeled heterozygosity
+	let z = 0.0; // C_pi
 	for (let i = k0; i < r.a.length; ++i)
 		z += r.a[i].n * (alpha[i - k0] - alpha[i - k0 + 1]);
-	return z * r.theta0 / scale;
+	const C_pi = z;
+	z = C_pi * r.theta0 / scale;
+	// calculate posterior heterozygosity
+	let y = 0.0, f = 0.0;
+	for (let i = k0; i < r.a.length; ++i) {
+		let t;
+		if (i == r.a.length - 1) {
+			t = r.a[i].n;
+		} else {
+			let tao = r.a[i+1].t - r.a[i].t;
+			let x = tao / r.a[i].n;
+			let tmp = 1.0 / x - 1.0 / (Math.exp(x) - 1);
+			if (tmp < 0.0) {
+				warn(`Warning: approximation failure at interval ${i}: ${tmp} < 0 (x=${x})`);
+				tmp = 0.0;
+			} else if (tmp >= 1.0) {
+				warn(`Warning: approximation failure at interval ${i}: ${tmp} >= 1 (x=${x})`);
+				tmp = 1.0;
+			}
+			t = tao * tmp;
+		}
+		f += r.a[i].sigma1;
+		y += (1.0 - Math.exp(-r.theta0 * (t + (r.a[i].t - r.a[k0].t)) / scale)) * r.a[i].sigma1;
+	}
+	return [z, y/f];
 }
 
 function main(args) {
@@ -157,21 +184,32 @@ function main(args) {
 		print(`  -N INT     pick the INT-th interation [${opt.round}]`);
 		print(`  -d FLOAT   sequence divergence cutoff [${opt.d0}]`);
 		print(`  -s INT     PSMC scaling used for psmcfa generation [${opt.scale}]`);
+		print(`Output:`);
+		print(`  1. index of the max time interval that is smaller than {-d}`);
+		print(`  2. lower bound of the interval`);
+		print(`  3. fraction of genome coalesced <{-d} (modeled)`);
+		print(`  4. fraction of genome coalesced <{-d} (posterior)`);
+		print(`  5. heterozygosity at t=0 (modeled)`);
+		print(`  6. heterozygosity at t=0 (posterior)`);
+		print(`  7. heterozygosity at t=Col2 (modeled)`);
+		print(`  8. heterozygosity at t=Col2 (posterior)`);
+		print(`  9. KL distance between modeled and posterior distributions`);
 		return 1;
 	}
 	for (let j = 0; j < args.length; ++j) {
+		warn(`Processing ${args[j]}`);
 		let r = psmc_parse(args[j], opt.round, opt.scale);
 		let k0 = psmc_select(r, opt.d0);
 		if (k0 < 0) {
-			warn(`"-d" is beyond the last time interval for file ${args[j]}. Skipped`);
+			warn(`Warning: {-d} is beyond the last time interval for file ${args[j]}. Skipped`);
 			continue;
 		}
 		let sigma0 = 0, sigma1 = 0;
 		for (let i = 0; i < k0; ++i)
 			sigma0 += r.a[i].sigma0, sigma1 += r.a[i].sigma1;
-		const avg = psmc_avg(r, k0, opt.scale);
-		const avg_all = r.C_pi * r.theta0 / opt.scale;
-		print(k0, r.a[k0].d.toFixed(9), sigma0.toFixed(4), sigma1.toFixed(4), avg.toFixed(9), avg_all.toFixed(9), r.ri.toFixed(4), args[j]);
+		const [het0_exp, het0_pos] = psmc_avg(r, 0, opt.scale);
+		const [hetk_exp, hetk_pos] = psmc_avg(r, k0, opt.scale);
+		print(k0, r.a[k0].d.toFixed(9), sigma0.toFixed(4), sigma1.toFixed(4), het0_exp.toFixed(8), het0_pos.toFixed(8), hetk_exp.toFixed(8), hetk_pos.toFixed(8), r.ri.toFixed(4), args[j]);
 	}
 }
 
