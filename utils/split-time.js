@@ -95,7 +95,7 @@ function* k8_readline(fn) {
  ****************/
 
 function psmc_parse(fn, round, scale) {
-	let r = { theta0:-1, a:[] };
+	let r = { theta0:-1, C_pi:-1, ri:-1, a:[] };
 	let s = 0;
 	for (const line of k8_readline(fn)) {
 		let m;
@@ -104,6 +104,10 @@ function psmc_parse(fn, round, scale) {
 				s = 1;
 		} else if (s == 1 && (m = /^TR\t(\S+)/.exec(line)) != null) {
 			r.theta0 = parseFloat(m[1]);
+		} else if (s == 1 && (m = /^RI\t(\S+)/.exec(line)) != null) {
+			r.ri = parseFloat(m[1]);
+		} else if (s == 1 && (m = /^MM\tC_pi: (\S+)/.exec(line)) != null) {
+			r.C_pi = parseFloat(m[1]);
 		} else if (s == 1 && (m = /^RS\t(\d+)\t(\S+)\t(\S+)\t\S+\t(\S+)\t(\S+)/.exec(line)) != null) {
 			let i = parseInt(m[1]);
 			r.a[i] = { t:parseFloat(m[2]), n:parseFloat(m[3]), sigma0:parseFloat(m[4]), sigma1:parseFloat(m[5]), d:0, theta:0 };
@@ -119,6 +123,7 @@ function psmc_parse(fn, round, scale) {
 }
 
 function psmc_select(r, d0) {
+	if (d0 <= 0.0) return 0;
 	for (let i = 0; i < r.a.length; ++i)
 		if (d0 < r.a[i].d)
 			return i;
@@ -157,12 +162,16 @@ function main(args) {
 	for (let j = 0; j < args.length; ++j) {
 		let r = psmc_parse(args[j], opt.round, opt.scale);
 		let k0 = psmc_select(r, opt.d0);
-		if (k0 < 0) throw Error(`"-d" is beyond the last time interval`);
+		if (k0 < 0) {
+			warn(`"-d" is beyond the last time interval for file ${args[j]}. Skipped`);
+			continue;
+		}
 		let sigma0 = 0, sigma1 = 0;
 		for (let i = 0; i < k0; ++i)
 			sigma0 += r.a[i].sigma0, sigma1 += r.a[i].sigma1;
 		const avg = psmc_avg(r, k0, opt.scale);
-		print(k0, r.a[k0].d.toFixed(9), sigma0.toFixed(4), sigma1.toFixed(4), avg.toFixed(9), args[j]);
+		const avg_all = r.C_pi * r.theta0 / opt.scale;
+		print(k0, r.a[k0].d.toFixed(9), sigma0.toFixed(4), sigma1.toFixed(4), avg.toFixed(9), avg_all.toFixed(9), r.ri.toFixed(4), args[j]);
 	}
 }
 
