@@ -4,11 +4,11 @@ use strict;
 use warnings;
 use Getopt::Std;
 
-my %opts = (min_baseQ=>0);
+my %opts = (q=>0);
 getopts('q:', \%opts);
 die("Usage: vcf2snp.pl [-q 0] <in.vcf>\n") if @ARGV < 1;
 
-my %tab = (AC=>'M', AG=>'R', AT=>'W', CG=>'S', CT=>'Y', GT=>'K', AA=>'A', CC=>'C', GG=>'G', TT=>'T');
+my %tab = (AC=>'M', CA=>'M', AG=>'R', GA=>'R', AT=>'W', TA=>'W', CG=>'S', GC=>'S', CT=>'Y', TC=>'Y', GT=>'K', TG=>'K', AA=>'A', CC=>'C', GG=>'G', TT=>'T');
 
 while (<>) {
 	chomp;
